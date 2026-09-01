@@ -14,6 +14,7 @@ let busy = false;
 let toastTimer;
 let lastStateHash = "";
 let editingRoundId = null;
+let editingPlayerId = null;
 let celebrationGame = null;
 let deferredInstallPrompt = null;
 
@@ -73,6 +74,8 @@ function createCloudApi() {
     getState: () => rpc("korova_get_state", { p_code: roomCode }),
     addPlayer: (name, emoji) => rpc("korova_add_player", { p_code: roomCode, p_name: name, p_emoji: emoji }),
     removePlayer: (playerId) => rpc("korova_remove_player", { p_code: roomCode, p_player_id: playerId }),
+    addExistingPlayer: (profileId) => rpc("korova_add_existing_player", { p_code: roomCode, p_profile_id: profileId }),
+    updatePlayerIcon: (playerId, emoji) => rpc("korova_update_player_icon", { p_code: roomCode, p_player_id: playerId, p_emoji: emoji }),
     addRound: (scores) => rpc("korova_add_round", { p_code: roomCode, p_scores: scores }),
     updateRound: (roundId, scores) => rpc("korova_update_round", { p_code: roomCode, p_round_id: roundId, p_scores: scores }),
     undoRound: () => rpc("korova_undo_last_round", { p_code: roomCode }),
@@ -86,12 +89,24 @@ function createLocalApi() {
   function fresh() {
     return {
       room: { code: roomCode, createdAt: new Date().toISOString() },
+      knownPlayers: [],
       currentGame: { id: uid(), startedAt: new Date().toISOString(), players: [], rounds: [] },
       archive: []
     };
   }
   function load() {
-    try { return JSON.parse(localStorage.getItem(key)) || fresh(); } catch { return fresh(); }
+    try {
+      const s = JSON.parse(localStorage.getItem(key)) || fresh();
+      if (!Array.isArray(s.knownPlayers)) s.knownPlayers = [];
+      const allPlayers = [...(s.currentGame?.players || []), ...(s.archive || []).flatMap(g => g.players || [])];
+      for (const player of allPlayers) {
+        let profile = s.knownPlayers.find(x => x.id === player.profileId) || s.knownPlayers.find(x => x.name.trim().toLowerCase() === player.name.trim().toLowerCase());
+        if (!profile) { profile = { id: uid(), name: player.name, emoji: player.emoji }; s.knownPlayers.push(profile); }
+        player.profileId = profile.id;
+      }
+      localStorage.setItem(key, JSON.stringify(s));
+      return s;
+    } catch { return fresh(); }
   }
   function save(value) { localStorage.setItem(key, JSON.stringify(value)); return structuredClone(value); }
   return {
@@ -101,7 +116,27 @@ function createLocalApi() {
       const s = load();
       if (s.currentGame.players.length >= LIMIT) throw new Error("В игре уже 10 игроков");
       if (s.currentGame.rounds.length) throw new Error("Игроков можно менять только до первого раунда");
-      s.currentGame.players.push({ id: uid(), name, emoji, seat: s.currentGame.players.length + 1 });
+      let profile = s.knownPlayers.find(x => x.name.trim().toLowerCase() === name.trim().toLowerCase());
+      if (!profile) { profile = { id: uid(), name, emoji }; s.knownPlayers.push(profile); }
+      if (s.currentGame.players.some(x => x.profileId === profile.id)) throw new Error("Этот игрок уже участвует");
+      s.currentGame.players.push({ id: uid(), profileId: profile.id, name: profile.name, emoji: profile.emoji, seat: s.currentGame.players.length + 1 });
+      return save(s);
+    },
+    addExistingPlayer: async (profileId) => {
+      const s = load();
+      if (s.currentGame.rounds.length) throw new Error("Игроков можно менять только до первого раунда");
+      if (s.currentGame.players.length >= LIMIT) throw new Error("В игре уже 10 игроков");
+      const profile = s.knownPlayers.find(x => x.id === profileId);
+      if (!profile) throw new Error("Игрок не найден");
+      if (s.currentGame.players.some(x => x.profileId === profile.id)) throw new Error("Этот игрок уже участвует");
+      s.currentGame.players.push({ id: uid(), profileId: profile.id, name: profile.name, emoji: profile.emoji, seat: s.currentGame.players.length + 1 });
+      return save(s);
+    },
+    updatePlayerIcon: async (playerId, emoji) => {
+      const s = load(); const player = s.currentGame.players.find(x => x.id === playerId);
+      if (!player) throw new Error("Игрок не найден");
+      const profile = s.knownPlayers.find(x => x.id === player.profileId); if (profile) profile.emoji = emoji;
+      for (const item of [s.currentGame, ...s.archive].flatMap(g => g.players || [])) if (item.profileId === player.profileId) item.emoji = emoji;
       return save(s);
     },
     removePlayer: async (id) => {
@@ -152,7 +187,7 @@ function statistics() {
     const ranks = ranking(game);
     const bestScore = ranks[0]?.total;
     for (const player of ranks) {
-      const key = player.name.trim().toLocaleLowerCase("ru");
+      const key = player.profileId || player.name.trim().toLocaleLowerCase("ru");
       const item = byName.get(key) || { name: player.name, emoji: player.emoji, games: 0, wins: 0, points: 0, best: Infinity };
       item.name = player.name;
       item.emoji = player.emoji;
@@ -274,7 +309,7 @@ function renderPlayerCard(player, rank, game) {
   const last = game.rounds.at(-1)?.scores?.[player.id];
   return `<article class="player-card ${rank === 0 && game.rounds.length ? "leader" : ""} ${!game.rounds.length ? "editable" : ""}">
     <div class="card-corner"><b>${player.total}</b><span>🐮</span></div>
-    <div class="player-icon">${esc(player.emoji)}</div>
+    <button class="player-icon editable-icon" data-action="open-edit-icon" data-id="${player.id}" title="Изменить значок" aria-label="Изменить значок игрока ${esc(player.name)}">${esc(player.emoji)}<span>${icon("edit")}</span></button>
     <div class="player-copy">
       <span class="rank">${game.rounds.length ? `${rank + 1} место` : `игрок ${player.seat}`}</span>
       <h3>${esc(player.name)}</h3>
@@ -378,10 +413,19 @@ function renderStatistics() {
 function renderModal() {
   if (!modal) return "";
   const shell = body => `<div class="modal-backdrop" data-action="close-modal"><section class="modal" role="dialog" aria-modal="true" data-modal><button class="modal-close" data-action="close-modal" aria-label="Закрыть">×</button>${body}</section></div>`;
-  if (modal === "add") return shell(`<span class="eyebrow">Новый участник</span><h2>Кто сегодня играет?</h2><form id="player-form">
-    <label class="field-label" for="player-name">Имя игрока</label><input class="text-input" id="player-name" name="name" maxlength="24" autocomplete="off" placeholder="Например, Андрей" required autofocus>
-    <span class="field-label">Выберите персонажа</span><div class="emoji-grid">${EMOJIS.map(e => `<button type="button" class="emoji-choice ${e === selectedEmoji ? "selected" : ""}" data-action="emoji" data-emoji="${e}" aria-label="Выбрать ${e}">${e}</button>`).join("")}</div>
-    <button class="button primary large full" type="submit" ${busy ? "disabled" : ""}>${icon("userPlus")} Добавить игрока</button></form>`);
+  if (modal === "add") {
+    const activeIds = new Set(state.currentGame.players.map(p => p.profileId));
+    const returning = (state.knownPlayers || []).filter(p => !activeIds.has(p.id));
+    return shell(`<span class="eyebrow">Состав партии</span><h2>Кто сегодня играет?</h2>${returning.length ? `<span class="field-label">Уже играли</span><div class="known-players">${returning.map(p => `<button class="known-player" data-action="add-existing" data-id="${p.id}"><span>${esc(p.emoji)}</span><b>${esc(p.name)}</b><small>Добавить</small></button>`).join("")}</div><div class="or-divider"><span>или новый игрок</span></div>` : ""}<form id="player-form">
+      <label class="field-label" for="player-name">Имя нового игрока</label><input class="text-input" id="player-name" name="name" maxlength="24" autocomplete="off" placeholder="Например, Андрей" required autofocus>
+      <span class="field-label">Выберите персонажа</span><div class="emoji-grid">${EMOJIS.map(e => `<button type="button" class="emoji-choice ${e === selectedEmoji ? "selected" : ""}" data-action="emoji" data-emoji="${e}" aria-label="Выбрать ${e}">${e}</button>`).join("")}</div>
+      <button class="button primary large full" type="submit" ${busy ? "disabled" : ""}>${icon("userPlus")} Добавить нового игрока</button></form>`);
+  }
+  if (modal === "edit-icon") {
+    const player = state.currentGame.players.find(p => p.id === editingPlayerId);
+    if (!player) return "";
+    return shell(`<span class="eyebrow">Профиль игрока</span><h2>${esc(player.name)}</h2><p class="modal-text">Новый значок также обновится в архиве и статистике.</p><form id="edit-icon-form"><div class="emoji-grid">${EMOJIS.map(e => `<button type="button" class="emoji-choice ${e === selectedEmoji ? "selected" : ""}" data-action="emoji" data-emoji="${e}" aria-label="Выбрать ${e}">${e}</button>`).join("")}</div><button class="button primary large full" type="submit">${icon("save")} Сохранить значок</button></form>`);
+  }
   if (modal === "edit") {
     const round = state.currentGame.rounds.find(r => r.id === editingRoundId);
     if (!round) return "";
@@ -427,8 +471,10 @@ root.addEventListener("click", async (event) => {
   if (button.dataset.tab) { tab = button.dataset.tab; render(); scrollTo({ top: 0, behavior: "smooth" }); return; }
   const action = button.dataset.action;
   if (action === "open-add") { selectedEmoji = EMOJIS[state.currentGame.players.length % EMOJIS.length]; modal = "add"; render(); setTimeout(() => document.querySelector("#player-name")?.focus(), 0); }
-  if (action === "close-modal" && (button.classList.contains("modal-close") || !event.target.closest("[data-modal]"))) { modal = null; editingRoundId = null; render(); }
+  if (action === "close-modal" && (button.classList.contains("modal-close") || !event.target.closest("[data-modal]"))) { modal = null; editingRoundId = null; editingPlayerId = null; render(); }
   if (action === "emoji") { const name = document.querySelector("#player-name")?.value || ""; selectedEmoji = button.dataset.emoji; render(); const input = document.querySelector("#player-name"); if (input) { input.value = name; input.focus(); } }
+  if (action === "add-existing") { mutate(() => api.addExistingPlayer(button.dataset.id), "Игрок добавлен в состав"); }
+  if (action === "open-edit-icon") { const player = state.currentGame.players.find(p => p.id === button.dataset.id); editingPlayerId = button.dataset.id; selectedEmoji = player?.emoji || EMOJIS[0]; modal = "edit-icon"; render(); }
   if (action === "remove-player") { const player = state.currentGame.players.find(p => p.id === button.dataset.id); if (confirm(`Убрать игрока «${player?.name}»?`)) mutate(() => api.removePlayer(button.dataset.id), "Игрок удалён"); }
   if (action === "undo" && confirm("Удалить результаты последнего раунда?")) mutate(() => api.undoRound(), "Последний раунд отменён");
   if (action === "open-edit-round") { editingRoundId = button.dataset.id; modal = "edit"; render(); }
@@ -448,6 +494,7 @@ root.addEventListener("click", async (event) => {
 root.addEventListener("submit", (event) => {
   event.preventDefault();
   if (event.target.id === "player-form") { const name = new FormData(event.target).get("name")?.trim(); if (name) mutate(() => api.addPlayer(name, selectedEmoji), `${name} за столом`); }
+  if (event.target.id === "edit-icon-form") { mutate(() => api.updatePlayerIcon(editingPlayerId, selectedEmoji), "Значок игрока обновлён"); }
   if (event.target.id === "round-form" || event.target.id === "edit-round-form") {
     const form = new FormData(event.target); const scores = {};
     for (const player of state.currentGame.players) {
