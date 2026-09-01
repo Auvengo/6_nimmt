@@ -1,4 +1,4 @@
-const EMOJIS = ["🐮","🐂","🐄","🤠","🦬","🐃","🌵","🌾","🃏","🎲","⭐","🔥","🍀","🌙","⚡","🍉","🦊","🐼","🐸","🦁","🐯","🐵","🐙","🦄"];
+const EMOJIS = ["🐮","🐂","🐄","🤠","🐃","🐷","🐶","🐱","🦊","🐭","🐹","🐰","🐻","🐼","🐨","🐯","🦁","🐸","🐵","🐔","🐧","🐦","🐺","🐗","🐴","🐝","🐛","🐌","🐞","🐜","🐢","🐍","🦂","🦀","🐙","🐬","🐳","🌵","🌽","🎲","🃏","⭐","🔥","🍀","🌙","⚡","🍉","🌈","🚀"];
 const LIMIT = 10;
 const WIN_LINE = 66;
 const root = document.querySelector("#app");
@@ -281,7 +281,7 @@ function renderPlayerCard(player, rank, game) {
       <p>${last == null ? "Очков пока нет" : `В прошлом раунде +${last}`}</p>
     </div>
     <div class="total"><strong>${player.total}</strong><span>итого</span>${cowMarks(player.total)}</div>
-    ${!game.rounds.length ? `<button class="remove" data-action="remove-player" data-id="${player.id}" aria-label="Убрать ${esc(player.name)}"><span aria-hidden="true">×</span><em>Убрать</em></button>` : ""}
+    ${!game.rounds.length ? `<button class="remove" data-action="remove-player" data-id="${player.id}" title="Убрать игрока" aria-label="Убрать ${esc(player.name)}">×</button>` : ""}
   </article>`;
 }
 
@@ -311,7 +311,8 @@ function renderScoreEntry(game, reached66) {
       <div class="score-actions">
         <button class="button primary large" type="submit" ${busy ? "disabled" : ""}>${icon("save")} ${busy ? "Сохраняем…" : "Записать раунд"}</button>
         ${game.rounds.length ? `<button class="button ghost" type="button" data-action="undo">${icon("undo")} Отменить последний</button>` : ""}
-        ${game.rounds.length ? `<button class="button finish" type="button" data-action="open-finish">${icon("flag")} Завершить игру</button>` : ""}
+        <button class="button ghost" type="button" data-action="open-reset">${icon("refresh")} Новая игра</button>
+        <button class="button finish" type="button" data-action="open-finish" ${game.rounds.length ? "" : 'disabled title="Сначала запишите хотя бы один раунд"'}>${icon("flag")} Завершить игру</button>
       </div>
     </form>
   </section>`;
@@ -389,6 +390,7 @@ function renderModal() {
       <button class="button primary large full" type="submit" ${busy ? "disabled" : ""}>${icon("save")} Сохранить изменения</button></form>`);
   }
   if (modal === "share") return shell(`<span class="eyebrow">Комната ${roomCode}</span><h2>Позвать игроков</h2><div class="qr-card"><img src="${"https:"+"//api.qrserver.com/v1/create-qr-code/?size=320x320&margin=8&data="+encodeURIComponent(location.href)}" alt="QR-код ссылки на комнату"><div><b>Наведите камеру</b><small>Все откроют ту же комнату</small></div></div><div class="share-actions"><button class="button primary full" data-action="copy-link">${icon("copy")} Скопировать ссылку</button><button class="button secondary full" data-action="install-app">${icon("download")} Установить приложение</button></div><p class="install-note">На iPhone: откройте сайт в Safari → «Поделиться» → «На экран Домой». На Android нажмите кнопку установки выше.</p>`);
+  if (modal === "reset") return shell(`<span class="eyebrow">Новая партия</span><h2>Начать новую игру?</h2><p class="modal-text">${state.currentGame.rounds.length ? "Текущий результат сохранится в архиве без праздничного экрана." : "Текущий пустой стол будет сброшен."}</p><label class="check-row"><input id="keep-players" type="checkbox" checked><span><b>Оставить тех же игроков</b><small>Счёт начнётся с нуля</small></span></label><button class="button primary large full" data-action="reset-game" ${busy ? "disabled" : ""}>${icon("refresh")} Начать новую игру</button>`);
   if (modal === "finish") return shell(`<span class="eyebrow">Финиш партии</span><h2>Завершить игру?</h2><p class="modal-text">Результат попадёт в архив и статистику. Победит игрок с наименьшим счётом.</p><label class="check-row"><input id="keep-players" type="checkbox" checked><span><b>Оставить тех же игроков</b><small>Новая партия начнётся с нулевого счёта</small></span></label><button class="button finish large full" data-action="finish-game" ${busy ? "disabled" : ""}>${icon("flag")} Завершить и показать победителя</button>`);
   if (modal === "winner" && celebrationGame) {
     const ranks = ranking(celebrationGame); const best = ranks[0]?.total; const winners = ranks.filter(p=>p.total===best);
@@ -430,7 +432,9 @@ root.addEventListener("click", async (event) => {
   if (action === "remove-player") { const player = state.currentGame.players.find(p => p.id === button.dataset.id); if (confirm(`Убрать игрока «${player?.name}»?`)) mutate(() => api.removePlayer(button.dataset.id), "Игрок удалён"); }
   if (action === "undo" && confirm("Удалить результаты последнего раунда?")) mutate(() => api.undoRound(), "Последний раунд отменён");
   if (action === "open-edit-round") { editingRoundId = button.dataset.id; modal = "edit"; render(); }
-  if (action === "open-finish") { modal = "finish"; render(); }
+  if (action === "open-reset") { modal = "reset"; render(); }
+  if (action === "reset-game") { const keep = document.querySelector("#keep-players")?.checked ?? true; mutate(() => api.newGame(keep), "Новая игра началась"); }
+  if (action === "open-finish") { if (state.currentGame.rounds.length) { modal = "finish"; render(); } }
   if (action === "finish-game") { const keep = document.querySelector("#keep-players")?.checked ?? true; finishCurrentGame(keep); }
   if (action === "close-winner") { celebrationGame = null; modal = null; tab = "game"; render(); }
   if (action === "open-share") { modal = "share"; render(); }
