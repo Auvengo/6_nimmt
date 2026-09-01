@@ -467,6 +467,47 @@ if ("serviceWorker" in navigator && location.protocol.startsWith("http")) window
 document.addEventListener("keydown", (event) => { if (event.key === "Escape" && modal) { modal = null; render(); } });
 window.addEventListener("storage", async () => { if (!cloudMode) { state = await api.getState(); render(); } });
 
+let syncTimer = null;
+let syncInFlight = false;
+let syncRetryDelay = 5000;
+
+function scheduleSync(delay = 5000) {
+  clearTimeout(syncTimer);
+  if (!cloudMode || document.hidden) return;
+  syncTimer = setTimeout(syncStateNow, delay);
+}
+
+async function syncStateNow() {
+  if (!cloudMode || document.hidden) return;
+  if (syncInFlight || busy || modal || document.activeElement?.matches("input")) {
+    scheduleSync(5000);
+    return;
+  }
+  syncInFlight = true;
+  try {
+    const next = await api.getState();
+    const hash = JSON.stringify(next);
+    if (hash !== lastStateHash) {
+      state = next;
+      lastStateHash = hash;
+      render();
+    }
+    syncRetryDelay = 5000;
+  } catch {
+    syncRetryDelay = Math.min(syncRetryDelay * 2, 30000);
+  } finally {
+    syncInFlight = false;
+    scheduleSync(syncRetryDelay);
+  }
+}
+
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) clearTimeout(syncTimer);
+  else syncStateNow();
+});
+window.addEventListener("focus", () => { if (cloudMode && !document.hidden) syncStateNow(); });
+window.addEventListener("online", () => { syncRetryDelay = 5000; syncStateNow(); });
+
 async function init() {
   render();
   try {
@@ -474,14 +515,7 @@ async function init() {
     state = await api.getState();
     lastStateHash = JSON.stringify(state);
     render();
-    setInterval(async () => {
-      if (busy || modal || document.activeElement?.matches("input")) return;
-      try {
-        const next = await api.getState();
-        const hash = JSON.stringify(next);
-        if (hash !== lastStateHash) { state = next; lastStateHash = hash; render(); }
-      } catch { /* тихий повтор на следующем цикле */ }
-    }, cloudMode ? 2200 : 4000);
+    scheduleSync(5000);
   } catch (error) {
     root.innerHTML = `<main class="fatal"><div class="logo-card mini">🐮<b>006</b></div><h1>Не удалось открыть комнату</h1><p>${esc(error.message)}</p><button class="button primary" onclick="location.reload()">Попробовать снова</button></main>`;
   }
