@@ -17,6 +17,7 @@ let editingRoundId = null;
 let editingPlayerId = null;
 let celebrationGame = null;
 let deferredInstallPrompt = null;
+let statsPeriod = "all";
 
 const ICON_PATHS = {
   share: '<path d="M14 4h6v6M20 4l-9 9"/><path d="M18 13v5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h5"/>',
@@ -71,12 +72,14 @@ function createCloudApi() {
   }
   return {
     ensure: () => rpc("korova_ensure_room", { p_code: roomCode }),
-    getState: () => rpc("korova_get_state", { p_code: roomCode }),
+    getState: async () => { const s=await rpc("korova_get_state",{p_code:roomCode});s.currentGame.draftScores=await rpc("korova_get_draft_scores",{p_code:roomCode});return s; },
     addPlayer: (name, emoji) => rpc("korova_add_player", { p_code: roomCode, p_name: name, p_emoji: emoji }),
     removePlayer: (playerId) => rpc("korova_remove_player", { p_code: roomCode, p_player_id: playerId }),
     addExistingPlayer: (profileId) => rpc("korova_add_existing_player", { p_code: roomCode, p_profile_id: profileId }),
     updatePlayerIcon: (playerId, emoji) => rpc("korova_update_player_icon", { p_code: roomCode, p_player_id: playerId, p_emoji: emoji }),
     addRound: (scores) => rpc("korova_add_round", { p_code: roomCode, p_scores: scores }),
+    setDraftScore: (playerId, score) => rpc("korova_set_draft_score", { p_code: roomCode, p_player_id: playerId, p_score: score }),
+    finalizeRound: () => rpc("korova_finalize_round", { p_code: roomCode }),
     updateRound: (roundId, scores) => rpc("korova_update_round", { p_code: roomCode, p_round_id: roundId, p_scores: scores }),
     undoRound: () => rpc("korova_undo_last_round", { p_code: roomCode }),
     newGame: (keepPlayers) => rpc("korova_new_game", { p_code: roomCode, p_keep_players: keepPlayers })
@@ -90,7 +93,7 @@ function createLocalApi() {
     return {
       room: { code: roomCode, createdAt: new Date().toISOString() },
       knownPlayers: [],
-      currentGame: { id: uid(), startedAt: new Date().toISOString(), players: [], rounds: [] },
+      currentGame: { id: uid(), startedAt: new Date().toISOString(), players: [], rounds: [], draftScores: {} },
       archive: []
     };
   }
@@ -98,6 +101,7 @@ function createLocalApi() {
     try {
       const s = JSON.parse(localStorage.getItem(key)) || fresh();
       if (!Array.isArray(s.knownPlayers)) s.knownPlayers = [];
+      if (!s.currentGame.draftScores) s.currentGame.draftScores = {};
       const allPlayers = [...(s.currentGame?.players || []), ...(s.archive || []).flatMap(g => g.players || [])];
       for (const player of allPlayers) {
         let profile = s.knownPlayers.find(x => x.id === player.profileId) || s.knownPlayers.find(x => x.name.trim().toLowerCase() === player.name.trim().toLowerCase());
@@ -145,6 +149,8 @@ function createLocalApi() {
       s.currentGame.players = s.currentGame.players.filter(p => p.id !== id).map((p, i) => ({ ...p, seat: i + 1 }));
       return save(s);
     },
+    setDraftScore: async (playerId, score) => { const s=load();s.currentGame.draftScores[playerId]=score;save(s);return structuredClone(s.currentGame.draftScores); },
+    finalizeRound: async () => { const s=load(),scores=s.currentGame.draftScores||{};if(s.currentGame.players.some(x=>!Object.prototype.hasOwnProperty.call(scores,x.id)))throw new Error("Сначала каждый игрок должен внести свои очки");s.currentGame.rounds.push({id:uid(),number:s.currentGame.rounds.length+1,createdAt:new Date().toISOString(),scores:{...scores}});s.currentGame.draftScores={};return save(s); },
     addRound: async (scores) => {
       const s = load();
       if (s.currentGame.players.length < 2) throw new Error("Добавьте минимум двух игроков");
@@ -165,7 +171,7 @@ function createLocalApi() {
       if (old.rounds.length) s.archive.unshift({ ...old, finishedAt: new Date().toISOString() });
       s.currentGame = {
         id: uid(), startedAt: new Date().toISOString(), rounds: [],
-        players: keepPlayers ? old.players.map((p, i) => ({ ...p, id: uid(), seat: i + 1 })) : []
+        players: keepPlayers ? old.players.map((p, i) => ({ ...p, id: uid(), seat: i + 1 })) : [], draftScores: {}
       };
       return save(s);
     }
@@ -318,45 +324,13 @@ function renderEmptyPlayers() {
 }
 
 function renderScoreEntry(game, reached66) {
-  return `<section class="score-section">
-    <div class="section-heading light">
-      <div><span class="section-no">02</span><h2>Очки раунда</h2></div>
-      <span class="hint">Введите штрафные коровы</span>
-    </div>
-    ${reached66 ? `<div class="game-over continue"><span>🐮</span><div><b>Рубеж 66 пройден</b><small>Игра продолжается, пока вы сами не нажмёте «Завершить игру».</small></div></div>` : ""}
-    <form id="round-form" class="score-form">
-      <div class="score-inputs">
-        ${[...game.players].sort((a,b) => a.seat-b.seat).map(p => `<label class="score-row">
-          <span class="score-person"><i>${esc(p.emoji)}</i><b>${esc(p.name)}</b><small>сейчас ${totalFor(p.id)}</small></span>
-          <span class="number-wrap"><span>＋</span><input inputmode="numeric" pattern="[0-9]*" min="0" max="999" type="number" name="${p.id}" placeholder="0" aria-label="Очки игрока ${esc(p.name)}" required></span>
-        </label>`).join("")}
-      </div>
-      <div class="score-actions">
-        <button class="button primary large" type="submit" ${busy ? "disabled" : ""}>${icon("save")} ${busy ? "Сохраняем…" : "Записать раунд"}</button>
-        ${game.rounds.length ? `<button class="button ghost" type="button" data-action="undo">${icon("undo")} Отменить последний</button>` : ""}
-        <button class="button ghost" type="button" data-action="open-reset">${icon("refresh")} Новая игра</button>
-        <button class="button finish" type="button" data-action="open-finish" ${game.rounds.length ? "" : 'disabled title="Сначала запишите хотя бы один раунд"'}>${icon("flag")} Завершить игру</button>
-      </div>
-    </form>
-  </section>`;
+  const drafts=game.draftScores||{},players=[...game.players].sort((a,b)=>a.seat-b.seat),ready=players.every(p=>Object.prototype.hasOwnProperty.call(drafts,p.id));
+  return `<section class="score-section"><div class="section-heading light"><div><span class="section-no">02</span><h2>Очки раунда</h2></div><span class="hint">${Object.keys(drafts).length} из ${players.length} внесли результат</span></div>${reached66?`<div class="game-over continue"><span>🐮</span><div><b>Рубеж 66 пройден</b><small>Игра продолжается до ручного завершения.</small></div></div>`:""}<form id="round-form" class="score-form"><div class="score-inputs">${players.map(p=>{const has=Object.prototype.hasOwnProperty.call(drafts,p.id);return `<label class="score-row ${has?"score-ready":""}"><span class="score-person"><i>${esc(p.emoji)}</i><b>${esc(p.name)}</b><small>${has?"результат внесён":"ожидаем игрока"}</small></span><span class="number-wrap"><span>${has?"✓":"＋"}</span><input data-draft-player="${p.id}" inputmode="numeric" min="0" max="999" type="number" value="${has?drafts[p.id]:""}" placeholder="—" aria-label="Очки игрока ${esc(p.name)}"></span></label>`}).join("")}</div><div class="score-actions"><button class="button primary large" type="submit" ${ready&&!busy?"":"disabled"}>${icon("save")} ${ready?"Завершить раунд":"Ждём всех игроков"}</button>${game.rounds.length?`<button class="button ghost" type="button" data-action="undo">${icon("undo")} Отменить последний</button>`:""}<button class="button ghost" type="button" data-action="open-reset">${icon("refresh")} Новая игра</button><button class="button finish" type="button" data-action="open-finish" ${game.rounds.length?"":'disabled'}>${icon("flag")} Завершить игру</button></div></form></section>`;
 }
-
 function renderRounds(game) {
-  const players = [...game.players].sort((a,b) => a.seat-b.seat);
-  return `<section class="rounds-section">
-    <div class="section-heading"><div><span class="section-no">03</span><h2>Ход партии</h2></div><span class="hint">Нажмите карандаш, чтобы исправить раунд</span></div>
-    <div class="round-table-wrap">
-      <table class="round-table">
-        <thead><tr><th>Раунд</th>${players.map(p => `<th><span>${esc(p.emoji)}</span>${esc(p.name)}</th>`).join("")}</tr></thead>
-        <tbody>
-          ${game.rounds.map(r => `<tr><td><b>${r.number}</b><small>${new Date(r.createdAt).toLocaleTimeString("ru-RU", {hour:"2-digit",minute:"2-digit"})}</small><button class="round-edit" data-action="open-edit-round" data-id="${r.id}" title="Редактировать раунд ${r.number}" aria-label="Редактировать раунд ${r.number}">${icon("edit")}</button></td>${players.map(p => `<td>+${r.scores[p.id] ?? 0}</td>`).join("")}</tr>`).join("")}
-          <tr class="sum-row"><td>Итого</td>${players.map(p => `<td>${totalFor(p.id)}</td>`).join("")}</tr>
-        </tbody>
-      </table>
-    </div>
-  </section>`;
+ const players=[...game.players].sort((a,b)=>a.seat-b.seat);
+ return `<section class="rounds-section"><div class="section-heading"><div><span class="section-no">03</span><h2>Ход партии</h2></div><span class="hint">Нажмите раунд, чтобы раскрыть</span></div><div class="round-accordion always">${[...game.rounds].reverse().map((r,i)=>`<details ${i===0?"open":""}><summary><span>Раунд ${r.number}</span><b>${new Date(r.createdAt).toLocaleTimeString("ru-RU",{hour:"2-digit",minute:"2-digit"})}</b></summary><div>${players.map(p=>`<p><span>${esc(p.emoji)} ${esc(p.name)}</span><strong>+${r.scores[p.id]??0}</strong></p>`).join("")}<button class="button secondary full" data-action="open-edit-round" data-id="${r.id}">${icon("edit")} Исправить раунд</button></div></details>`).join("")}<button class="undo-change" data-action="undo-change">${icon("undo")} Отменить последнее исправление</button></div></section>`;
 }
-
 function renderArchive() {
   if (!state.archive.length) return `<section class="archive-empty"><div class="empty-trophy">${icon("trophy")}</div><h1>Архив ещё пуст</h1><p>Завершённые партии появятся здесь вместе с датой, составом и финальным счётом.</p><button class="button primary" data-tab="game">${icon("cards")} Вернуться к игре</button></section>`;
   return `<section class="archive-page">
@@ -413,7 +387,7 @@ function renderModal() {
   }
   if (modal === "share") return shell(`<span class="eyebrow">Комната ${roomCode}</span><h2>Позвать игроков</h2><div class="qr-card"><img src="${"https:"+"//api.qrserver.com/v1/create-qr-code/?size=320x320&margin=8&data="+encodeURIComponent(location.href)}" alt="QR-код ссылки на комнату"><div><b>Наведите камеру</b><small>Все откроют ту же комнату</small></div></div><div class="share-actions"><button class="button primary full" data-action="copy-link">${icon("copy")} Скопировать ссылку</button><button class="button secondary full" data-action="install-app">${icon("download")} Установить приложение</button></div><p class="install-note">На iPhone: откройте сайт в Safari → «Поделиться» → «На экран Домой». На Android нажмите кнопку установки выше.</p>`);
   if (modal === "reset") return shell(`<span class="eyebrow">Новая партия</span><h2>Начать новую игру?</h2><p class="modal-text">${state.currentGame.rounds.length ? "Текущий результат сохранится в архиве без праздничного экрана." : "Текущий пустой стол будет сброшен."}</p><label class="check-row"><input id="keep-players" type="checkbox" checked><span><b>Оставить тех же игроков</b><small>Счёт начнётся с нуля</small></span></label><button class="button primary large full" data-action="reset-game" ${busy ? "disabled" : ""}>${icon("refresh")} Начать новую игру</button>`);
-  if (modal === "finish") return shell(`<span class="eyebrow">Финиш партии</span><h2>Завершить игру?</h2><p class="modal-text">Результат попадёт в архив и статистику. Победит игрок с наименьшим счётом.</p><label class="check-row"><input id="keep-players" type="checkbox" checked><span><b>Оставить тех же игроков</b><small>Новая партия начнётся с нулевого счёта</small></span></label><button class="button finish large full" data-action="finish-game" ${busy ? "disabled" : ""}>${icon("flag")} Завершить и показать победителя</button>`);
+  if (modal === "finish") return shell(`<span class="eyebrow">Финиш партии</span><h2>Завершить игру?</h2><p class="modal-text">Результат попадёт в архив и статистику. Победит игрок с на��меньшим счётом.</p><label class="check-row"><input id="keep-players" type="checkbox" checked><span><b>Оставить тех же игроков</b><small>Новая партия начнётся с нулевого счёта</small></span></label><button class="button finish large full" data-action="finish-game" ${busy ? "disabled" : ""}>${icon("flag")} Завершить и показать победителя</button>`);
   if (modal === "winner" && celebrationGame) {
     const ranks = ranking(celebrationGame); const best = ranks[0]?.total; const winners = ranks.filter(p=>p.total===best);
     return `<div class="modal-backdrop winner-backdrop"><div class="confetti" aria-hidden="true">${Array.from({length:28},(_,i)=>`<i style="--i:${i}"></i>`).join("")}</div><section class="modal winner-modal" role="dialog" aria-modal="true" data-modal><span class="winner-crown">🏆</span><span class="eyebrow">Партия завершена</span><h2>${winners.length>1?"Победители":"Победитель"}: ${winners.map(p=>esc(p.name)).join(", ")}</h2><div class="winner-avatars">${winners.map(p=>`<span>${esc(p.emoji)}</span>`).join("")}</div><p>Лучший результат — <b>${best} очк.</b></p><ol class="mini-results">${ranks.map((p,i)=>`<li><span>${i+1}. ${esc(p.emoji)} ${esc(p.name)}</span><b>${p.total}</b></li>`).join("")}</ol><button class="button primary large full" data-action="close-winner">${icon("cards")} Перейти к новой игре</button></section></div>`;
@@ -469,20 +443,14 @@ root.addEventListener("click", async (event) => {
   }
 });
 
+root.addEventListener("change", async event => { const input=event.target.closest("[data-draft-player]");if(!input)return;const score=Number(input.value);if(input.value===""||!Number.isInteger(score)||score<0||score>999){showToast("Введите целое число от 0 до 999","error");return}try{input.disabled=true;const drafts=await api.setDraftScore(input.dataset.draftPlayer,score);state.currentGame.draftScores=drafts;lastStateHash=JSON.stringify(state);render();showToast("Ваш результат сохранён")}catch(e){input.disabled=false;showToast(e.message||"Не удалось сохранить","error")}});
+
 root.addEventListener("submit", (event) => {
   event.preventDefault();
   if (event.target.id === "player-form") { const name = new FormData(event.target).get("name")?.trim(); if (name) mutate(() => api.addPlayer(name, selectedEmoji), `${name} за столом`); }
   if (event.target.id === "edit-icon-form") { mutate(() => api.updatePlayerIcon(editingPlayerId, selectedEmoji), "Значок игрока обновлён"); }
-  if (event.target.id === "round-form" || event.target.id === "edit-round-form") {
-    const form = new FormData(event.target); const scores = {};
-    for (const player of state.currentGame.players) {
-      const raw = form.get(player.id);
-      if (raw === "" || raw == null || Number(raw) < 0 || !Number.isInteger(Number(raw))) { showToast(`Укажите целые очки для игрока ${player.name}`, "error"); return; }
-      scores[player.id] = Number(raw);
-    }
-    if (event.target.id === "edit-round-form") mutate(() => api.updateRound(editingRoundId, scores), "Результат раунда исправлен");
-    else mutate(() => api.addRound(scores), "Раунд записан");
-  }
+  if (event.target.id === "round-form") mutate(() => api.finalizeRound(), "Раунд завершён");
+  if (event.target.id === "edit-round-form") { const form=new FormData(event.target),scores={};for(const player of state.currentGame.players){const raw=form.get(player.id);if(raw===""||raw==null||Number(raw)<0||!Number.isInteger(Number(raw))){showToast(`Укажите очки для ${player.name}`,"error");return}scores[player.id]=Number(raw)}mutate(()=>api.updateRound(editingRoundId,scores),"Результат раунда исправлен"); }
 });
 
 window.addEventListener("beforeinstallprompt", event => { event.preventDefault(); deferredInstallPrompt = event; });
