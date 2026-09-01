@@ -357,10 +357,15 @@ function renderArchiveGame(game, index) {
 function renderStatistics() {
   const data=statistics(),items=data.items;
   if(!items.length)return `<section class="archive-empty"><div class="empty-trophy">${icon("chart")}</div><h1>Нет партий за период</h1><p>Выберите другой период или завершите игру.</p><div class="period-tabs">${renderPeriods()}</div></section>`;
-  const renderTrend=p=>{const vals=p.trend.slice(-8),max=Math.max(...vals,1);return `<span class="mini-trend">${vals.map(v=>`<i style="height:${Math.max(8,Math.round(v/max*34))}px" title="${v}"></i>`).join("")}</span>`};
-  return `<section class="stats-page"><div class="archive-title"><span class="eyebrow">Личная история</span><h1>Статистика игроков</h1><div class="period-tabs">${renderPeriods()}</div></div><div class="stats-table-wrap"><table class="stats-table"><thead><tr><th>Игрок</th><th>Игры</th><th>Победы</th><th>% побед</th><th>Среднее</th><th>Рекорд</th><th>Серия</th><th>Динамика</th></tr></thead><tbody>${items.map((p,i)=>`<tr><td><span class="stat-rank">${i+1}</span><span class="avatar">${esc(p.emoji)}</span><b>${esc(p.name)}</b></td><td>${p.games}</td><td>${p.wins}</td><td><strong>${p.winRate}%</strong></td><td>${p.average}</td><td>${p.best}</td><td>${p.streak} <small>(макс. ${p.bestStreak})</small></td><td>${renderTrend(p)}</td></tr>`).join("")}</tbody></table></div></section>`;
+  const renderTrend=p=>{const vals=p.trend.slice(-8),max=Math.max(...vals,1);return `<span class="mini-trend" aria-label="Последние результаты: ${vals.join(", ")}">${vals.map(v=>`<i style="height:${Math.max(8,Math.round(v/max*34))}px" title="${v} очк."></i>`).join("")}</span>`};
+  const player=p=>`<span class="stat-player"><span class="stat-rank">${p.rank}</span><span class="avatar">${esc(p.emoji)}</span><b>${esc(p.name)}</b></span>`;
+  const ranked=items.map((p,i)=>({...p,rank:i+1}));
+  return `<section class="stats-page"><div class="archive-title"><span class="eyebrow">Личная история</span><h1>Статистика игроков</h1><div class="period-tabs">${renderPeriods()}</div></div>
+  <div class="stats-table-wrap"><table class="stats-table"><thead><tr><th>Игрок</th><th>Игры</th><th>Победы</th><th>% побед</th><th>Среднее</th><th>Рекорд</th><th>Серия</th><th>Динамика</th></tr></thead><tbody>${ranked.map(p=>`<tr><td>${player(p)}</td><td>${p.games}</td><td>${p.wins}</td><td><strong>${p.winRate}%</strong></td><td>${p.average}</td><td>${p.best}</td><td>${p.streak} <small>(макс. ${p.bestStreak})</small></td><td>${renderTrend(p)}</td></tr>`).join("")}</tbody></table></div>
+  <div class="stats-mobile">${ranked.map(p=>`<article class="stat-card"><header>${player(p)}<strong>${p.winRate}%<small> побед</small></strong></header><div class="stat-card-grid"><div><small>Игры</small><b>${p.games}</b></div><div><small>Победы</small><b>${p.wins}</b></div><div><small>Среднее</small><b>${p.average}</b></div><div><small>Рекорд</small><b>${p.best}</b></div></div><footer><span>Серия: <b>${p.streak}</b> · максимум ${p.bestStreak}</span><span class="trend-box">${renderTrend(p)}<small>последние игры</small></span></footer></article>`).join("")}</div>
+  <details class="stats-help"><summary>Что означают показатели?</summary><dl><div><dt>Среднее</dt><dd>Средний итоговый штрафной счёт за партию. Чем меньше, тем лучше.</dd></div><div><dt>Рекорд</dt><dd>Самый низкий итоговый счёт игрока за выбранный период.</dd></div><div><dt>Серия</dt><dd>Победы подряд сейчас; в скобках — лучшая серия за период.</dd></div><div><dt>Динамика</dt><dd>Последние результаты слева направо. Низкий столбик лучше высокого.</dd></div></dl></details></section>`;
 }
-function renderPeriods(){return [["week","Неделя"],["month","Месяц"],["all","Всё время"]].map(([id,label])=>`<button class="${statsPeriod===id?"active":""}" data-action="stats-period" data-period="${id}">${label}</button>`).join("")}
+function renderPeriods(){return [["week","Неделя"],["month","Месяц"],["all","Всё время"]].map(([id,label])=>`<button type="button" class="${statsPeriod===id?"active":""}" data-action="stats-period" data-period="${id}">${label}</button>`).join("")}
 
 function renderModal() {
   if (!modal) return "";
@@ -422,6 +427,7 @@ root.addEventListener("click", async (event) => {
   if (button.dataset.modal != null) return;
   if (button.dataset.tab) { tab = button.dataset.tab; render(); scrollTo({ top: 0, behavior: "smooth" }); return; }
   const action = button.dataset.action;
+  if (action === "stats-period") { statsPeriod = button.dataset.period || "all"; render(); return; }
   if (action === "open-add") { selectedEmoji = EMOJIS[state.currentGame.players.length % EMOJIS.length]; modal = "add"; render(); setTimeout(() => document.querySelector("#player-name")?.focus(), 0); }
   if (action === "close-modal" && (button.classList.contains("modal-close") || !event.target.closest("[data-modal]"))) { modal = null; editingRoundId = null; editingPlayerId = null; render(); }
   if (action === "emoji") { const name = document.querySelector("#player-name")?.value || ""; selectedEmoji = button.dataset.emoji; render(); const input = document.querySelector("#player-name"); if (input) { input.value = name; input.focus(); } }
