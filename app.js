@@ -21,6 +21,9 @@ let statsPeriod = "all";
 let selectedProfileId = null, selectedOpponentId = null, manualImport = null;
 const pendingKey = `korova-pending-${roomCode}`;
 let pendingWrites = JSON.parse(localStorage.getItem(pendingKey) || "[]");
+const adminKey=`korova-admin-${roomCode}`;let adminSession=JSON.parse(localStorage.getItem(adminKey)||"null");
+function isAdmin(){return !cloudMode||!!(adminSession?.token&&new Date(adminSession.expiresAt)>new Date())}
+function adminToken(){return adminSession?.token||"local"}
 
 const ICON_PATHS = {
   share: '<path d="M14 4h6v6M20 4l-9 9"/><path d="M18 13v5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h5"/>',
@@ -74,20 +77,22 @@ function createCloudApi() {
     return response.status === 204 ? null : response.json();
   }
   return {
+    adminLogin: (pin) => rpc("korova_admin_login",{p_code:roomCode,p_pin:pin}),
+    updateProfile: (profileId,name,emoji) => rpc("korova_admin_update_profile",{p_code:roomCode,p_token:adminToken(),p_profile_id:profileId,p_name:name,p_emoji:emoji}),
     ensure: () => rpc("korova_ensure_room", { p_code: roomCode }),
     getState: async () => { const s=await rpc("korova_get_state",{p_code:roomCode});s.currentGame.draftScores=await rpc("korova_get_draft_scores",{p_code:roomCode});return s; },
-    addPlayer: (name, emoji) => rpc("korova_add_player", { p_code: roomCode, p_name: name, p_emoji: emoji }),
-    removePlayer: (playerId) => rpc("korova_remove_player", { p_code: roomCode, p_player_id: playerId }),
-    addExistingPlayer: (profileId) => rpc("korova_add_existing_player", { p_code: roomCode, p_profile_id: profileId }),
-    updatePlayerIcon: (playerId, emoji) => rpc("korova_update_player_icon", { p_code: roomCode, p_player_id: playerId, p_emoji: emoji }),
+    addPlayer: (name, emoji) => rpc("korova_admin_add_player", { p_code: roomCode, p_token: adminToken(), p_name: name, p_emoji: emoji }),
+    removePlayer: (playerId) => rpc("korova_admin_remove_player", { p_code: roomCode, p_token: adminToken(), p_player_id: playerId }),
+    addExistingPlayer: (profileId) => rpc("korova_admin_add_existing_player", { p_code: roomCode, p_token: adminToken(), p_profile_id: profileId }),
+    updatePlayerIcon: (playerId, emoji) => rpc("korova_admin_update_player_icon", { p_code: roomCode, p_token: adminToken(), p_player_id: playerId, p_emoji: emoji }),
     addRound: (scores) => rpc("korova_add_round", { p_code: roomCode, p_scores: scores }),
     setDraftScore: (playerId, score) => rpc("korova_set_draft_score", { p_code: roomCode, p_player_id: playerId, p_score: score }),
     clearDraftScore: (playerId) => rpc("korova_clear_draft_score", { p_code: roomCode, p_player_id: playerId }),
-    finalizeRound: () => rpc("korova_finalize_round", { p_code: roomCode }),
-    importGame: (playedAt, profiles, rounds) => rpc("korova_import_game", { p_code: roomCode, p_played_at: playedAt, p_profiles: profiles, p_rounds: rounds }),
-    updateRound: (roundId, scores) => rpc("korova_update_round", { p_code: roomCode, p_round_id: roundId, p_scores: scores }),
-    undoRound: () => rpc("korova_undo_last_round", { p_code: roomCode }),
-    newGame: (keepPlayers) => rpc("korova_new_game", { p_code: roomCode, p_keep_players: keepPlayers })
+    finalizeRound: () => rpc("korova_admin_finalize_round", { p_code: roomCode, p_token: adminToken() }),
+    importGame: (playedAt, profiles, rounds) => rpc("korova_admin_import_game", { p_code: roomCode, p_token: adminToken(), p_played_at: playedAt, p_profiles: profiles, p_rounds: rounds }),
+    updateRound: (roundId, scores) => rpc("korova_admin_update_round", { p_code: roomCode, p_token: adminToken(), p_round_id: roundId, p_scores: scores }),
+    undoRound: () => rpc("korova_admin_undo_round", { p_code: roomCode, p_token: adminToken() }),
+    newGame: (keepPlayers) => rpc("korova_admin_new_game", { p_code: roomCode, p_token: adminToken(), p_keep_players: keepPlayers })
   };
 }
 
@@ -119,6 +124,8 @@ function createLocalApi() {
   }
   function save(value) { localStorage.setItem(key, JSON.stringify(value)); return structuredClone(value); }
   return {
+    adminLogin: async pin => ({token:"local",expiresAt:"2099-01-01T00:00:00Z"}),
+    updateProfile: async (profileId,name,emoji)=>{const s=load(),pr=s.knownPlayers.find(x=>x.id===profileId);if(pr){pr.name=name;pr.emoji=emoji}for(const x of [s.currentGame,...s.archive].flatMap(g=>g.players||[]))if(x.profileId===profileId){x.name=name;x.emoji=emoji}return save(s)},
     ensure: async () => { if (!localStorage.getItem(key)) save(fresh()); },
     getState: async () => structuredClone(load()),
     addPlayer: async (name, emoji) => {
@@ -256,7 +263,7 @@ function render() {
           <span class="brand-card"><span>🐮</span><b>006</b></span>
           <span><strong>Коровосчёт</strong><small>Не бери шестую</small></span>
         </a>
-        <div class="room-tools"><span class="sync-badge ${!navigator.onLine?"offline":pendingWrites.length?"pending":"saved"}">${!navigator.onLine?`Нет соединения · не отправлено ${pendingWrites.length}`:pendingWrites.length?`Не отправлено: ${pendingWrites.length}`:"Всё сохранено"}</span>
+        <div class="room-tools"><button class="admin-pill ${isAdmin()?"active":""}" data-action="open-admin">${isAdmin()?"🔓 Организатор":"🔒 Войти"}</button><span class="sync-badge ${!navigator.onLine?"offline":pendingWrites.length?"pending":"saved"}">${!navigator.onLine?`Нет соединения · не отправлено ${pendingWrites.length}`:pendingWrites.length?`Не отправлено: ${pendingWrites.length}`:"Всё сохранено"}</span>
           <span class="room-label">Комната <b>${roomCode}</b></span>
           <button class="icon-btn" data-action="open-share" title="Поделиться и установить" aria-label="Поделиться и установить">${icon("share")}</button>
         </div>
@@ -332,7 +339,7 @@ function renderEmptyPlayers() {
 
 function renderScoreEntry(game, reached66) {
   const drafts=game.draftScores||{},players=[...game.players].sort((a,b)=>a.seat-b.seat),ready=players.every(p=>Object.prototype.hasOwnProperty.call(drafts,p.id));
-  return `<section class="score-section"><div class="section-heading light"><div><span class="section-no">02</span><h2>Очки раунда</h2></div><span class="hint">Заполнено ${Object.keys(drafts).length} из ${players.length}</span></div><p class="score-collab">Заполняйте как удобно: один человек за всех или каждый со своего телефона.</p>${reached66?`<div class="game-over continue"><span>🐮</span><div><b>Рубеж 66 пройден</b><small>Игра продолжается до ручного завершения.</small></div></div>`:""}<form id="round-form" class="score-form"><div class="score-inputs">${players.map(p=>{const has=Object.prototype.hasOwnProperty.call(drafts,p.id);return `<label class="score-row ${has?"score-ready":""}"><span class="score-person"><i>${esc(p.emoji)}</i><b>${esc(p.name)}</b><small>${has?"результат сохранён":"значение не введено"}</small></span><span class="number-wrap"><span>${has?"✓":"＋"}</span><input data-draft-player="${p.id}" inputmode="numeric" min="0" max="999" type="number" value="${has?drafts[p.id]:""}" placeholder="—" aria-label="Очки игрока ${esc(p.name)}"></span></label>`}).join("")}</div><div class="score-actions"><button class="button primary large" type="submit" ${ready&&!busy?"":"disabled"}>${icon("save")} ${ready?"Завершить раунд":"Заполните все результаты"}</button>${game.rounds.length?`<button class="button ghost" type="button" data-action="undo">${icon("undo")} Отменить последний</button>`:""}<button class="button ghost" type="button" data-action="open-reset">${icon("refresh")} Новая игра</button><button class="button finish" type="button" data-action="open-finish" ${game.rounds.length?"":'disabled'}>${icon("flag")} Завершить игру</button></div></form></section>`;
+  return `<section class="score-section"><div class="section-heading light"><div><span class="section-no">02</span><h2>Очки раунда</h2></div><span class="hint">Заполнено ${Object.keys(drafts).length} из ${players.length}</span></div><p class="score-collab">Заполняйте как удобно: один человек за всех или каждый со своего телефона.</p>${reached66?`<div class="game-over continue"><span>🐮</span><div><b>Рубеж 66 пройден</b><small>Игра продолжается до ручного завершения.</small></div></div>`:""}<form id="round-form" class="score-form"><div class="score-inputs">${players.map(p=>{const has=Object.prototype.hasOwnProperty.call(drafts,p.id);return `<label class="score-row ${has?"score-ready":""}"><span class="score-person"><i>${esc(p.emoji)}</i><b>${esc(p.name)}</b><small>${has?"результат сохранён":"значение не введено"}</small></span><span class="number-wrap"><span>${has?"✓":"＋"}</span><input data-draft-player="${p.id}" inputmode="numeric" min="0" max="999" type="number" value="${has?drafts[p.id]:""}" placeholder="—" aria-label="Очки игрока ${esc(p.name)}"></span></label>`}).join("")}</div><div class="score-actions"><button class="button primary large" type="submit" ${ready&&!busy&&isAdmin()?"":"disabled"}>${icon("save")} ${ready?(isAdmin()?"Завершить раунд":"Ждём организатора"):"Заполните все результаты"}</button>${game.rounds.length?`<button class="button ghost" type="button" data-action="undo">${icon("undo")} Отменить последний</button>`:""}<button class="button ghost" type="button" data-action="open-reset">${icon("refresh")} Новая игра</button><button class="button finish" type="button" data-action="open-finish" ${game.rounds.length?"":'disabled'}>${icon("flag")} Завершить игру</button></div></form></section>`;
 }
 function renderRounds(game) {
  const players=[...game.players].sort((a,b)=>a.seat-b.seat);
@@ -383,6 +390,7 @@ function renderModal() {
   if (!modal) return "";
   const shell = body => `<div class="modal-backdrop" data-action="close-modal"><section class="modal" role="dialog" aria-modal="true" data-modal><button class="modal-close" data-action="close-modal" aria-label="Закрыть">×</button>${body}</section></div>`;
 
+  if(modal==="admin"){return shell(`<span class="eyebrow">Режим организатора</span><h2>${isAdmin()?"Доступ открыт":"Введите PIN"}</h2>${isAdmin()?`<p class="modal-text">Административные действия доступны до ${formatDate(adminSession.expiresAt)}.</p><button class="button secondary full" data-action="admin-logout">Выйти из режима организатора</button>`:`<form id="admin-login-form"><label class="field-label">Шестизначный PIN</label><input class="text-input admin-pin" name="pin" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" required autofocus><button class="button primary full" type="submit">Войти</button></form>`}`)}
   if(modal==="import"){const known=state.knownPlayers||[];return shell(`<span class="eyebrow">Ручной архив</span><h2>Добавить прошлую партию</h2><form id="import-setup-form"><label class="field-label">Дата игры</label><input class="text-input" type="date" name="date" max="${new Date().toISOString().slice(0,10)}" required><span class="field-label">Участники</span><div class="import-profiles">${known.map(p=>`<label><input type="checkbox" name="profile" value="${p.id}"><span>${esc(p.emoji)} ${esc(p.name)}</span></label>`).join("")}</div><button class="button primary full" type="submit">Продолжить к раундам</button></form>`)}
   if(modal==="import-rounds"){const profiles=manualImport.profileIds.map(id=>state.knownPlayers.find(p=>p.id===id));return shell(`<span class="eyebrow">${manualImport.date}</span><h2>Результаты по раундам</h2><form id="import-game-form"><div class="import-rounds">${Array.from({length:manualImport.roundCount},(_,i)=>`<fieldset class="import-round"><legend>Раунд ${i+1}</legend>${profiles.map(p=>`<label><span>${esc(p.emoji)} ${esc(p.name)}</span><input type="number" min="0" max="999" inputmode="numeric" name="r${i}-${p.id}" placeholder="0"></label>`).join("")}</fieldset>`).join("")}</div><div class="import-actions"><button type="button" class="button secondary" data-action="import-add-round">＋ Раунд</button><button type="button" class="button secondary" data-action="import-remove-round">− Раунд</button></div><div class="import-totals">${profiles.map(p=>`<span>${esc(p.emoji)} ${esc(p.name)}: <b data-import-total="${p.id}">0</b></span>`).join("")}</div><button class="button primary full" type="submit">Сохранить прошлую партию</button></form>`)}
   if(modal==="player-card"){const p=(state.knownPlayers||[]).find(x=>x.id===selectedProfileId);if(!p)return"";const c=careerFor(p.id),awards=awardsFor(p.id),opponents=(state.knownPlayers||[]).filter(x=>x.id!==p.id&&state.archive.some(g=>g.players.some(y=>y.profileId===p.id)&&g.players.some(y=>y.profileId===x.id)));const opp=opponents.find(x=>x.id===selectedOpponentId)||opponents[0],h=opp?headToHead(p.id,opp.id):null;return shell(`<div class="profile-hero"><span>${esc(p.emoji)}</span><div><span class="eyebrow">Личная карточка</span><h2>${esc(p.name)}</h2></div></div><div class="award-list">${awards.map(x=>`<span>🏅 ${x}</span>`).join("")}</div><div class="profile-metrics"><div><b>${c.games}</b><small>игр</small></div><div><b>${c.wins}</b><small>побед</small></div><div><b>${c.average}</b><small>среднее</small></div><div><b>${c.best}</b><small>рекорд</small></div></div>${opponents.length?`<h3>Личные встречи</h3><div class="opponent-list">${opponents.map(x=>`<button class="${opp?.id===x.id?"active":""}" data-action="select-opponent" data-id="${x.id}">${esc(x.emoji)} ${esc(x.name)}</button>`).join("")}</div>${h?`<div class="h2h"><b>${esc(p.name)} ${h.aw}</b><span>${h.shared} общих игр · ничьи ${h.ties}</span><b>${h.bw} ${esc(opp.name)}</b></div>`:""}`:"<p>Пока нет совместных партий с другими игроками.</p>"}`)}
@@ -397,7 +405,7 @@ function renderModal() {
   if (modal === "edit-icon") {
     const player = state.currentGame.players.find(p => p.id === editingPlayerId);
     if (!player) return "";
-    return shell(`<span class="eyebrow">Профиль игрока</span><h2>${esc(player.name)}</h2><p class="modal-text">Новый значок также обновится в архиве и статистике.</p><form id="edit-icon-form"><div class="emoji-grid">${EMOJIS.map(e => `<button type="button" class="emoji-choice ${e === selectedEmoji ? "selected" : ""}" data-action="emoji" data-emoji="${e}" aria-label="Выбрать ${e}">${e}</button>`).join("")}</div><button class="button primary large full" type="submit">${icon("save")} Сохранить значок</button></form>`);
+    return shell(`<span class="eyebrow">Профиль игрока</span><h2>${esc(player.name)}</h2><form id="edit-profile-form"><label class="field-label">Имя</label><input class="text-input" name="name" value="${esc(player.name)}" maxlength="24" required><span class="field-label">Значок</span><div class="emoji-grid">${EMOJIS.map(e => `<button type="button" class="emoji-choice ${e === selectedEmoji ? "selected" : ""}" data-action="emoji" data-emoji="${e}" aria-label="Выбрать ${e}">${e}</button>`).join("")}</div><button class="button primary large full" type="submit">${icon("save")} Сохранить профиль</button></form>`);
   }
   if (modal === "edit") {
     const round = state.currentGame.rounds.find(r => r.id === editingRoundId);
@@ -443,6 +451,11 @@ root.addEventListener("click", async (event) => {
   if (button.dataset.modal != null) return;
   if (button.dataset.tab) { tab = button.dataset.tab; render(); scrollTo({ top: 0, behavior: "smooth" }); return; }
   const action = button.dataset.action;
+  if(action==="open-admin"){modal="admin";render();return}
+  if(action==="admin-logout"){adminSession=null;localStorage.removeItem(adminKey);modal=null;render();return}
+  const adminActions=new Set(["open-add","add-existing","open-edit-icon","remove-player","undo","open-edit-round","open-reset","reset-game","open-finish","finish-game","open-import","import-add-round","import-remove-round"]);
+  if(adminActions.has(action)&&!isAdmin()){modal="admin";render();showToast("Сначала войдите как организатор");return}
+
   if(action==="open-import"){manualImport=null;modal="import";render();return}
   if(action==="import-add-round"){manualImport.roundCount++;render();return}
   if(action==="import-remove-round"&&manualImport.roundCount>1){manualImport.roundCount--;render();return}
@@ -483,7 +496,7 @@ function refreshDraftUi() {
   });
   const count=Object.keys(drafts).length,ready=players.length>0&&players.every(p=>Object.prototype.hasOwnProperty.call(drafts,p.id));
   const hint=document.querySelector(".score-section .section-heading .hint");if(hint)hint.textContent=`Заполнено ${count} из ${players.length}`;
-  const button=document.querySelector('#round-form button[type="submit"]');if(button){button.disabled=!ready||busy||!navigator.onLine||pendingWrites.length>0;button.innerHTML=`${icon("save")} ${ready?"Завершить раунд":"Заполните все результаты"}`;}
+  const button=document.querySelector('#round-form button[type="submit"]');if(button){button.disabled=!ready||busy||!isAdmin()||!navigator.onLine||pendingWrites.length>0;button.innerHTML=`${icon("save")} ${ready?(isAdmin()?"Завершить раунд":"Ждём организатора"):"Заполните все результаты"}`;}
 }
 
 root.addEventListener("input",event=>{if(!event.target.closest("#import-game-form"))return;for(const id of manualImport.profileIds){let sum=0;document.querySelectorAll(`[name$="-${id}"]`).forEach(x=>sum+=Number(x.value)||0);const out=document.querySelector(`[data-import-total="${id}"]`);if(out)out.textContent=sum}});
@@ -495,10 +508,12 @@ root.addEventListener("change", async event => {const input=event.target.closest
 
 root.addEventListener("submit", (event) => {
   event.preventDefault();
+  if(event.target.id==="admin-login-form"){const pin=new FormData(event.target).get("pin");mutate(async()=>{adminSession=await api.adminLogin(pin);localStorage.setItem(adminKey,JSON.stringify(adminSession));return api.getState()},"Режим организатора включён");return}
+  if(!isAdmin()&&event.target.id!=="round-form"){modal="admin";render();return}
   if(event.target.id==="import-setup-form"){const fd=new FormData(event.target),ids=fd.getAll("profile"),date=fd.get("date");if(ids.length<2){showToast("Выберите минимум двух игроков","error");return}manualImport={date,profileIds:ids,roundCount:5};modal="import-rounds";render();return}
   if(event.target.id==="import-game-form"){const fd=new FormData(event.target),rounds=[];for(let i=0;i<manualImport.roundCount;i++){const row={};let any=false,all=true;for(const id of manualImport.profileIds){const v=fd.get(`r${i}-${id}`);if(v!==""){any=true;row[id]=Number(v)}else all=false}if(any&&!all){showToast(`Заполните весь раунд ${i+1}`,"error");return}if(any)rounds.push(row)}if(!rounds.length){showToast("Добавьте хотя бы один раунд","error");return}mutate(()=>api.importGame(`${manualImport.date}T12:00:00`,manualImport.profileIds,rounds),"Прошлая партия добавлена");return}
   if (event.target.id === "player-form") { const name = new FormData(event.target).get("name")?.trim(); if (name) mutate(() => api.addPlayer(name, selectedEmoji), `${name} за столом`); }
-  if (event.target.id === "edit-icon-form") { mutate(() => api.updatePlayerIcon(editingPlayerId, selectedEmoji), "Значок игрока обновлён"); }
+  if (event.target.id === "edit-profile-form") {const pl=state.currentGame.players.find(x=>x.id===editingPlayerId),name=new FormData(event.target).get("name")?.trim();mutate(()=>api.updateProfile(pl.profileId,name,selectedEmoji),"Профиль обновлён");}
   if (event.target.id === "round-form") mutate(() => api.finalizeRound(), "Раунд завершён");
   if (event.target.id === "edit-round-form") { const form=new FormData(event.target),scores={};for(const player of state.currentGame.players){const raw=form.get(player.id);if(raw===""||raw==null||Number(raw)<0||!Number.isInteger(Number(raw))){showToast(`Укажите очки для ${player.name}`,"error");return}scores[player.id]=Number(raw)}mutate(()=>api.updateRound(editingRoundId,scores),"Результат раунда исправлен"); }
 });
