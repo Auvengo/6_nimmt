@@ -182,24 +182,12 @@ function ranking(game = state.currentGame) {
   return [...game.players].map(p => ({ ...p, total: totalFor(p.id, game) })).sort((a, b) => a.total - b.total || a.seat - b.seat);
 }
 function statistics() {
-  const byName = new Map();
-  for (const game of state.archive) {
-    const ranks = ranking(game);
-    const bestScore = ranks[0]?.total;
-    for (const player of ranks) {
-      const key = player.profileId || player.name.trim().toLocaleLowerCase("ru");
-      const item = byName.get(key) || { name: player.name, emoji: player.emoji, games: 0, wins: 0, points: 0, best: Infinity };
-      item.name = player.name;
-      item.emoji = player.emoji;
-      item.games += 1;
-      item.points += player.total;
-      item.best = Math.min(item.best, player.total);
-      if (player.total === bestScore) item.wins += 1;
-      byName.set(key, item);
-    }
-  }
-  return [...byName.values()].map(item => ({ ...item, average: Math.round(item.points / item.games * 10) / 10 }))
-    .sort((a, b) => b.wins - a.wins || a.average - b.average || b.games - a.games);
+  const now=Date.now(),days=statsPeriod==="week"?7:statsPeriod==="month"?30:null;
+  const games=[...state.archive].filter(g=>!days||now-new Date(g.finishedAt||g.startedAt).getTime()<=days*86400000).reverse();
+  const map=new Map();
+  for(const game of games){const ranks=ranking(game),best=ranks[0]?.total,winners=new Set(ranks.filter(x=>x.total===best).map(x=>x.profileId||x.name.toLowerCase()));for(const player of ranks){const key=player.profileId||player.name.toLowerCase();const won=winners.has(key);const x=map.get(key)||{name:player.name,emoji:player.emoji,games:0,wins:0,points:0,best:Infinity,streak:0,bestStreak:0,trend:[]};x.name=player.name;x.emoji=player.emoji;x.games++;x.points+=player.total;x.best=Math.min(x.best,player.total);x.trend.push(player.total);if(won){x.wins++;x.streak++;x.bestStreak=Math.max(x.bestStreak,x.streak)}else x.streak=0;map.set(key,x)}}
+  const items=[...map.values()].map(x=>({...x,average:Math.round(x.points/x.games*10)/10,winRate:Math.round(x.wins/x.games*100)})).sort((a,b)=>b.wins-a.wins||a.average-b.average);
+  return {items,games};
 }
 function formatDate(iso) {
   return new Intl.DateTimeFormat("ru-RU", { day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" }).format(new Date(iso));
@@ -393,22 +381,12 @@ function renderArchiveGame(game, index) {
 }
 
 function renderStatistics() {
-  const items = statistics();
-  if (!items.length) return `<section class="archive-empty"><div class="empty-trophy">${icon("chart")}</div><h1>Нужна хотя бы одна партия</h1><p>Статистика появится после первого ручного завершения игры.</p><button class="button primary" data-tab="game">${icon("cards")} Вернуться к игре</button></section>`;
-  const totalGames = state.archive.length;
-  const champion = items[0];
-  return `<section class="stats-page">
-    <div class="archive-title"><span class="eyebrow">Личная история</span><h1>Статистика игроков</h1><p>Считаются только завершённые партии этой комнаты.</p></div>
-    <div class="stats-summary">
-      <div><span>${icon("archive")}</span><b>${totalGames}</b><small>${plural(totalGames,"партия","партии","партий")}</small></div>
-      <div><span>${icon("userPlus")}</span><b>${items.length}</b><small>${plural(items.length,"игрок","игрока","игроков")}</small></div>
-      <div><span>${esc(champion.emoji)}</span><b>${esc(champion.name)}</b><small>лидер по победам</small></div>
-    </div>
-    <div class="stats-table-wrap"><table class="stats-table"><thead><tr><th>Игрок</th><th>Игры</th><th>Победы</th><th>Среднее</th><th>Лучший счёт</th></tr></thead><tbody>
-      ${items.map((p,i)=>`<tr><td><span class="stat-rank">${i+1}</span><span class="avatar">${esc(p.emoji)}</span><b>${esc(p.name)}</b></td><td>${p.games}</td><td><strong>${p.wins}</strong></td><td>${p.average}</td><td>${p.best}</td></tr>`).join("")}
-    </tbody></table></div>
-  </section>`;
+  const data=statistics(),items=data.items;
+  if(!items.length)return `<section class="archive-empty"><div class="empty-trophy">${icon("chart")}</div><h1>Нет партий за период</h1><p>Выберите другой период или завершите игру.</p><div class="period-tabs">${renderPeriods()}</div></section>`;
+  const renderTrend=p=>{const vals=p.trend.slice(-8),max=Math.max(...vals,1);return `<span class="mini-trend">${vals.map(v=>`<i style="height:${Math.max(8,Math.round(v/max*34))}px" title="${v}"></i>`).join("")}</span>`};
+  return `<section class="stats-page"><div class="archive-title"><span class="eyebrow">Личная история</span><h1>Статистика игроков</h1><div class="period-tabs">${renderPeriods()}</div></div><div class="stats-table-wrap"><table class="stats-table"><thead><tr><th>Игрок</th><th>Игры</th><th>Победы</th><th>% побед</th><th>Среднее</th><th>Рекорд</th><th>Серия</th><th>Динамика</th></tr></thead><tbody>${items.map((p,i)=>`<tr><td><span class="stat-rank">${i+1}</span><span class="avatar">${esc(p.emoji)}</span><b>${esc(p.name)}</b></td><td>${p.games}</td><td>${p.wins}</td><td><strong>${p.winRate}%</strong></td><td>${p.average}</td><td>${p.best}</td><td>${p.streak} <small>(макс. ${p.bestStreak})</small></td><td>${renderTrend(p)}</td></tr>`).join("")}</tbody></table></div></section>`;
 }
+function renderPeriods(){return [["week","Неделя"],["month","Месяц"],["all","Всё время"]].map(([id,label])=>`<button class="${statsPeriod===id?"active":""}" data-action="stats-period" data-period="${id}">${label}</button>`).join("")}
 
 function renderModal() {
   if (!modal) return "";
