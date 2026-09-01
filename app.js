@@ -14,6 +14,21 @@ let busy = false;
 let toastTimer;
 let lastStateHash = "";
 
+const ICON_PATHS = {
+  share: '<path d="M14 4h6v6M20 4l-9 9"/><path d="M18 13v5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h5"/>',
+  cards: '<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 7h6M9 17h6M12 10v4"/>',
+  archive: '<path d="M4 7h16v13H4zM3 3h18v4H3z"/><path d="M9 11h6"/>',
+  userPlus: '<circle cx="9" cy="8" r="4"/><path d="M3 21v-2a6 6 0 0 1 6-6h1M17 11v6M14 14h6"/>',
+  save: '<path d="M5 3h12l3 3v15H4V3z"/><path d="M8 3v6h8V3M8 21v-7h8v7"/>',
+  undo: '<path d="M9 7 4 12l5 5"/><path d="M5 12h8a6 6 0 0 1 6 6v1"/>',
+  refresh: '<path d="M20 7v5h-5"/><path d="M18.5 16a8 8 0 1 1 .5-8l1 4"/>',
+  trash: '<path d="M4 7h16M9 7V4h6v3M7 7l1 14h8l1-14M10 11v6M14 11v6"/>',
+  trophy: '<path d="M8 4h8v5a4 4 0 0 1-8 0V4zM9 20h6M12 13v7"/><path d="M8 6H4v2a4 4 0 0 0 4 4M16 6h4v2a4 4 0 0 1-4 4"/>'
+};
+function icon(name) {
+  return `<svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICON_PATHS[name] || ""}</svg>`;
+}
+
 function getRoomCode() {
   const url = new URL(location.href);
   let code = (url.searchParams.get("room") || "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 10);
@@ -171,15 +186,15 @@ function render() {
         </a>
         <div class="room-tools">
           <span class="room-label">Комната <b>${roomCode}</b></span>
-          <button class="icon-btn" data-action="share" title="Скопировать ссылку" aria-label="Скопировать ссылку">↗</button>
+          <button class="icon-btn" data-action="share" title="Скопировать ссылку" aria-label="Скопировать ссылку">${icon("share")}</button>
         </div>
       </header>
 
       ${!cloudMode ? `<aside class="demo-banner"><span>Локальный режим</span> Данные видны только на этом устройстве. Для мультидоступа подключите Supabase по README.</aside>` : ""}
 
       <nav class="tabs" aria-label="Разделы">
-        <button class="tab ${tab === "game" ? "active" : ""}" data-tab="game">Текущая игра</button>
-        <button class="tab ${tab === "archive" ? "active" : ""}" data-tab="archive">Архив <span>${state.archive.length}</span></button>
+        <button class="tab ${tab === "game" ? "active" : ""}" data-tab="game">${icon("cards")} Текущая игра</button>
+        <button class="tab ${tab === "archive" ? "active" : ""}" data-tab="archive">${icon("archive")} Архив <span>${state.archive.length}</span></button>
       </nav>
 
       <main>
@@ -208,7 +223,7 @@ function renderGame(game, ranks, leader, danger) {
 
     <div class="section-heading">
       <div><span class="section-no">01</span><h2>Таблица игроков</h2></div>
-      ${game.players.length < LIMIT && !game.rounds.length ? `<button class="button secondary" data-action="open-add">＋ Добавить игрока</button>` : ""}
+      ${game.players.length < LIMIT && !game.rounds.length ? `<button class="button secondary" data-action="open-add">${icon("userPlus")} Добавить игрока</button>` : ""}
     </div>
 
     ${game.players.length ? `<section class="players-grid">${ranks.map((p, i) => renderPlayerCard(p, i, game)).join("")}</section>` : renderEmptyPlayers()}
@@ -220,7 +235,7 @@ function renderGame(game, ranks, leader, danger) {
 
 function renderPlayerCard(player, rank, game) {
   const last = game.rounds.at(-1)?.scores?.[player.id];
-  return `<article class="player-card ${rank === 0 && game.rounds.length ? "leader" : ""}">
+  return `<article class="player-card ${rank === 0 && game.rounds.length ? "leader" : ""} ${!game.rounds.length ? "editable" : ""}">
     <div class="card-corner"><b>${player.total}</b><span>🐮</span></div>
     <div class="player-icon">${esc(player.emoji)}</div>
     <div class="player-copy">
@@ -229,7 +244,7 @@ function renderPlayerCard(player, rank, game) {
       <p>${last == null ? "Очков пока нет" : `В прошлом раунде +${last}`}</p>
     </div>
     <div class="total"><strong>${player.total}</strong><span>итого</span>${cowMarks(player.total)}</div>
-    ${!game.rounds.length ? `<button class="remove" data-action="remove-player" data-id="${player.id}" aria-label="Удалить ${esc(player.name)}">×</button>` : ""}
+    ${!game.rounds.length ? `<button class="remove" data-action="remove-player" data-id="${player.id}" title="Удалить игрока" aria-label="Удалить ${esc(player.name)}">${icon("trash")}</button>` : ""}
   </article>`;
 }
 
@@ -238,7 +253,7 @@ function renderEmptyPlayers() {
     <div class="empty-cards" aria-hidden="true"><i>17</i><i>55</i><i>104</i></div>
     <h3>За столом пока пусто</h3>
     <p>Добавьте имена и выберите каждому персонажа.</p>
-    <button class="button primary" data-action="open-add">Добавить первого игрока</button>
+    <button class="button primary" data-action="open-add">${icon("userPlus")} Добавить первого игрока</button>
   </section>`;
 }
 
@@ -257,9 +272,9 @@ function renderScoreEntry(game, danger) {
         </label>`).join("")}
       </div>
       <div class="score-actions">
-        <button class="button primary large" type="submit" ${busy ? "disabled" : ""}>${busy ? "Сохраняем…" : "Записать раунд"}</button>
-        ${game.rounds.length ? `<button class="button ghost" type="button" data-action="undo">Отменить прошлый раунд</button>` : ""}
-        <button class="button end" type="button" data-action="open-new">Новая игра</button>
+        <button class="button primary large" type="submit" ${busy ? "disabled" : ""}>${icon("save")} ${busy ? "Сохраняем…" : "Записать раунд"}</button>
+        ${game.rounds.length ? `<button class="button ghost" type="button" data-action="undo">${icon("undo")} Отменить прошлый раунд</button>` : ""}
+        <button class="button end" type="button" data-action="open-new">${icon("refresh")} Новая игра</button>
       </div>
     </form>
   </section>`;
@@ -282,7 +297,7 @@ function renderRounds(game) {
 }
 
 function renderArchive() {
-  if (!state.archive.length) return `<section class="archive-empty"><div>🏆</div><h1>Архив ещё пуст</h1><p>Завершённые партии появятся здесь вместе с датой, составом и финальным счётом.</p><button class="button primary" data-tab="game">Вернуться к игре</button></section>`;
+  if (!state.archive.length) return `<section class="archive-empty"><div class="empty-trophy">${icon("trophy")}</div><h1>Архив ещё пуст</h1><p>Завершённые партии появятся здесь вместе с датой, составом и финальным счётом.</p><button class="button primary" data-tab="game">${icon("cards")} Вернуться к игре</button></section>`;
   return `<section class="archive-page">
     <div class="archive-title"><span class="eyebrow">История стола</span><h1>Прошлые игры</h1><p>Победитель — игрок с наименьшим количеством штрафных очков.</p></div>
     <div class="archive-list">${state.archive.map((game, index) => renderArchiveGame(game, index)).join("")}</div>
@@ -321,7 +336,7 @@ function renderModal() {
     <span class="eyebrow">Финиш партии</span><h2 id="new-title">Начать новую игру?</h2>
     <p class="modal-text">Текущий результат сохранится в архиве. В новой игре счёт начнётся с нуля.</p>
     <label class="check-row"><input id="keep-players" type="checkbox" checked><span><b>Оставить тех же игроков</b><small>Имена и персонажи перейдут в новую игру</small></span></label>
-    <button class="button end large full" data-action="new-game" ${busy ? "disabled" : ""}>Сохранить и начать заново</button>
+    <button class="button end large full" data-action="new-game" ${busy ? "disabled" : ""}>${icon("refresh")} Сохранить и начать заново</button>
   </section></div>`;
 }
 
