@@ -18,6 +18,9 @@ let editingPlayerId = null;
 let celebrationGame = null;
 let deferredInstallPrompt = null;
 let statsPeriod = "all";
+let selectedProfileId = null, selectedOpponentId = null, manualImport = null;
+const pendingKey = `korova-pending-${roomCode}`;
+let pendingWrites = JSON.parse(localStorage.getItem(pendingKey) || "[]");
 
 const ICON_PATHS = {
   share: '<path d="M14 4h6v6M20 4l-9 9"/><path d="M18 13v5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h5"/>',
@@ -81,6 +84,7 @@ function createCloudApi() {
     setDraftScore: (playerId, score) => rpc("korova_set_draft_score", { p_code: roomCode, p_player_id: playerId, p_score: score }),
     clearDraftScore: (playerId) => rpc("korova_clear_draft_score", { p_code: roomCode, p_player_id: playerId }),
     finalizeRound: () => rpc("korova_finalize_round", { p_code: roomCode }),
+    importGame: (playedAt, profiles, rounds) => rpc("korova_import_game", { p_code: roomCode, p_played_at: playedAt, p_profiles: profiles, p_rounds: rounds }),
     updateRound: (roundId, scores) => rpc("korova_update_round", { p_code: roomCode, p_round_id: roundId, p_scores: scores }),
     undoRound: () => rpc("korova_undo_last_round", { p_code: roomCode }),
     newGame: (keepPlayers) => rpc("korova_new_game", { p_code: roomCode, p_keep_players: keepPlayers })
@@ -152,6 +156,7 @@ function createLocalApi() {
     },
     setDraftScore: async (playerId, score) => { const s=load();s.currentGame.draftScores[playerId]=score;save(s);return structuredClone(s.currentGame.draftScores); },
     clearDraftScore: async (playerId) => { const s=load();delete s.currentGame.draftScores[playerId];save(s);return structuredClone(s.currentGame.draftScores); },
+    importGame: async (playedAt, profiles, rounds) => { const s=load(),game={id:uid(),startedAt:playedAt,finishedAt:playedAt,players:profiles.map((id,i)=>{const p=s.knownPlayers.find(x=>x.id===id);return{id:uid(),profileId:id,name:p.name,emoji:p.emoji,seat:i+1}}),rounds:[]};game.rounds=rounds.map((r,i)=>({id:uid(),number:i+1,createdAt:playedAt,scores:Object.fromEntries(game.players.map(x=>[x.id,r[x.profileId]]))}));s.archive.push(game);s.archive.sort((x,y)=>new Date(y.finishedAt)-new Date(x.finishedAt));return save(s); },
     finalizeRound: async () => { const s=load(),scores=s.currentGame.draftScores||{};if(s.currentGame.players.some(x=>!Object.prototype.hasOwnProperty.call(scores,x.id)))throw new Error("Сначала каждый игрок должен внести свои очки");s.currentGame.rounds.push({id:uid(),number:s.currentGame.rounds.length+1,createdAt:new Date().toISOString(),scores:{...scores}});s.currentGame.draftScores={};return save(s); },
     addRound: async (scores) => {
       const s = load();
@@ -193,7 +198,7 @@ function statistics() {
   const now=Date.now(),days=statsPeriod==="week"?7:statsPeriod==="month"?30:null;
   const games=[...state.archive].filter(g=>!days||now-new Date(g.finishedAt||g.startedAt).getTime()<=days*86400000).reverse();
   const map=new Map();
-  for(const game of games){const ranks=ranking(game),best=ranks[0]?.total,winners=new Set(ranks.filter(x=>x.total===best).map(x=>x.profileId||x.name.toLowerCase()));for(const player of ranks){const key=player.profileId||player.name.toLowerCase();const won=winners.has(key);const x=map.get(key)||{name:player.name,emoji:player.emoji,games:0,wins:0,points:0,best:Infinity,streak:0,bestStreak:0,trend:[]};x.name=player.name;x.emoji=player.emoji;x.games++;x.points+=player.total;x.best=Math.min(x.best,player.total);x.trend.push(player.total);if(won){x.wins++;x.streak++;x.bestStreak=Math.max(x.bestStreak,x.streak)}else x.streak=0;map.set(key,x)}}
+  for(const game of games){const ranks=ranking(game),best=ranks[0]?.total,winners=new Set(ranks.filter(x=>x.total===best).map(x=>x.profileId||x.name.toLowerCase()));for(const player of ranks){const key=player.profileId||player.name.toLowerCase();const won=winners.has(key);const x=map.get(key)||{profileId:player.profileId||key,name:player.name,emoji:player.emoji,games:0,wins:0,points:0,best:Infinity,streak:0,bestStreak:0,trend:[]};x.name=player.name;x.emoji=player.emoji;x.games++;x.points+=player.total;x.best=Math.min(x.best,player.total);x.trend.push(player.total);if(won){x.wins++;x.streak++;x.bestStreak=Math.max(x.bestStreak,x.streak)}else x.streak=0;map.set(key,x)}}
   const items=[...map.values()].map(x=>({...x,average:Math.round(x.points/x.games*10)/10,winRate:Math.round(x.wins/x.games*100)})).sort((a,b)=>b.wins-a.wins||a.average-b.average);
   return {items,games};
 }
@@ -251,7 +256,7 @@ function render() {
           <span class="brand-card"><span>🐮</span><b>006</b></span>
           <span><strong>Коровосчёт</strong><small>Не бери шестую</small></span>
         </a>
-        <div class="room-tools">
+        <div class="room-tools"><span class="sync-badge ${!navigator.onLine?"offline":pendingWrites.length?"pending":"saved"}">${!navigator.onLine?`Нет соединения · не отправлено ${pendingWrites.length}`:pendingWrites.length?`Не отправлено: ${pendingWrites.length}`:"Всё сохранено"}</span>
           <span class="room-label">Комната <b>${roomCode}</b></span>
           <button class="icon-btn" data-action="open-share" title="Поделиться и установить" aria-label="Поделиться и установить">${icon("share")}</button>
         </div>
@@ -334,9 +339,9 @@ function renderRounds(game) {
  return `<section class="rounds-section"><div class="section-heading"><div><span class="section-no">03</span><h2>Ход партии</h2></div><span class="hint">Нажмите раунд, чтобы раскрыть</span></div><div class="round-accordion always">${[...game.rounds].reverse().map((r,i)=>`<details ${i===0?"open":""}><summary><span>Раунд ${r.number}</span><b>${new Date(r.createdAt).toLocaleTimeString("ru-RU",{hour:"2-digit",minute:"2-digit"})}</b></summary><div>${players.map(p=>`<p><span>${esc(p.emoji)} ${esc(p.name)}</span><strong>+${r.scores[p.id]??0}</strong></p>`).join("")}<button class="button secondary full" data-action="open-edit-round" data-id="${r.id}">${icon("edit")} Исправить раунд</button></div></details>`).join("")}<button class="undo-change" data-action="undo-change">${icon("undo")} Отменить последнее исправление</button></div></section>`;
 }
 function renderArchive() {
-  if (!state.archive.length) return `<section class="archive-empty"><div class="empty-trophy">${icon("trophy")}</div><h1>Архив ещё пуст</h1><p>Завершённые партии появятся здесь вместе с датой, составом и финальным счётом.</p><button class="button primary" data-tab="game">${icon("cards")} Вернуться к игре</button></section>`;
+  if (!state.archive.length) return `<section class="archive-empty"><div class="empty-trophy">${icon("trophy")}</div><h1>Архив ещё пуст</h1><p>Завершённые партии появятся здесь вместе с датой, составом и финальным счётом.</p><button class="button primary" data-action="open-import">＋ Добавить прошлую партию</button></section>`;
   return `<section class="archive-page">
-    <div class="archive-title"><span class="eyebrow">История стола</span><h1>Прошлые игры</h1><p>Победитель — игрок с наименьшим количеством штрафных очков.</p></div>
+    <div class="archive-title archive-title-actions"><div><span class="eyebrow">История стола</span><h1>Прошлые игры</h1><p>Победитель — игрок с наименьшим количеством штрафных очков.</p></div><button class="button secondary" data-action="open-import">＋ Добавить прошлую партию</button></div>
     <div class="archive-list">${state.archive.map((game, index) => renderArchiveGame(game, index)).join("")}</div>
   </section>`;
 }
@@ -360,7 +365,7 @@ function renderStatistics() {
   const data=statistics(),items=data.items;
   if(!items.length)return `<section class="archive-empty"><div class="empty-trophy">${icon("chart")}</div><h1>Нет партий за период</h1><p>Выберите другой период или завершите игру.</p><div class="period-tabs">${renderPeriods()}</div></section>`;
   const renderTrend=p=>{const vals=p.trend.slice(-8),max=Math.max(...vals,1);return `<span class="mini-trend" aria-label="Последние результаты: ${vals.join(", ")}">${vals.map(v=>`<i style="height:${Math.max(8,Math.round(v/max*34))}px" title="${v} очк."></i>`).join("")}</span>`};
-  const player=p=>`<span class="stat-player"><span class="stat-rank">${p.rank}</span><span class="avatar">${esc(p.emoji)}</span><b>${esc(p.name)}</b></span>`;
+  const player=p=>`<button class="stat-player stat-player-open" data-action="open-player-card" data-id="${p.profileId||""}"><span class="stat-rank">${p.rank}</span><span class="avatar">${esc(p.emoji)}</span><b>${esc(p.name)}</b></button>`;
   const ranked=items.map((p,i)=>({...p,rank:i+1}));
   return `<section class="stats-page"><div class="archive-title"><span class="eyebrow">Личная история</span><h1>Статистика игроков</h1><div class="period-tabs">${renderPeriods()}</div></div>
   <div class="stats-table-wrap"><table class="stats-table"><thead><tr><th>Игрок</th><th>Игры</th><th>Победы</th><th>% побед</th><th>Среднее</th><th>Рекорд</th><th>Серия</th><th>Динамика</th></tr></thead><tbody>${ranked.map(p=>`<tr><td>${player(p)}</td><td>${p.games}</td><td>${p.wins}</td><td><strong>${p.winRate}%</strong></td><td>${p.average}</td><td>${p.best}</td><td>${p.streak} <small>(макс. ${p.bestStreak})</small></td><td>${renderTrend(p)}</td></tr>`).join("")}</tbody></table></div>
@@ -369,9 +374,18 @@ function renderStatistics() {
 }
 function renderPeriods(){return [["week","Неделя"],["month","Месяц"],["all","Всё время"]].map(([id,label])=>`<button type="button" class="${statsPeriod===id?"active":""}" data-action="stats-period" data-period="${id}">${label}</button>`).join("")}
 
+function careerFor(profileId){const games=[...state.archive].sort((a,b)=>new Date(a.finishedAt)-new Date(b.finishedAt)),rows=[];for(const g of games){const p=g.players.find(x=>x.profileId===profileId);if(!p)continue;const total=totalFor(p.id,g),best=Math.min(...ranking(g).map(x=>x.total));rows.push({game:g,total,won:total===best})}let streak=0,bestStreak=0;for(const r of rows){if(r.won){streak++;bestStreak=Math.max(bestStreak,streak)}else streak=0}return{rows,games:rows.length,wins:rows.filter(x=>x.won).length,average:rows.length?Math.round(rows.reduce((s,x)=>s+x.total,0)/rows.length*10)/10:0,best:rows.length?Math.min(...rows.map(x=>x.total)):0,streak,bestStreak}}
+function awardsFor(profileId){const all=(state.knownPlayers||[]).map(p=>({p,c:careerFor(p.id)})).filter(x=>x.c.games),me=all.find(x=>x.p.id===profileId);if(!me)return["Новичок стада"];if(me.c.games<3)return["Новичок стада"];const out=[];if(me.c.average===Math.min(...all.filter(x=>x.c.games>=3).map(x=>x.c.average)))out.push("Укротитель коров");if(me.c.games===Math.max(...all.map(x=>x.c.games)))out.push("Железное копыто");if(me.c.best===Math.min(...all.map(x=>x.c.best)))out.push("Снайпер шестого ряда");if(me.c.bestStreak===Math.max(...all.map(x=>x.c.bestStreak))&&me.c.bestStreak>1)out.push("Победный галоп");const vals=me.c.rows.map(x=>x.total),avg=me.c.average,variance=vals.reduce((s,v)=>s+(v-avg)**2,0)/vals.length;if(variance>300)out.push("Коровьи горки");if(me.c.average===Math.max(...all.filter(x=>x.c.games>=3).map(x=>x.c.average)))out.push("Коровий магнит");return out.slice(0,3).length?out.slice(0,3):["Тёмная лошадка"]}
+function headToHead(a,b){let aw=0,bw=0,ties=0,shared=0;for(const g of state.archive){const pa=g.players.find(x=>x.profileId===a),pb=g.players.find(x=>x.profileId===b);if(!pa||!pb)continue;shared++;const at=totalFor(pa.id,g),bt=totalFor(pb.id,g);if(at<bt)aw++;else if(bt<at)bw++;else ties++}return{shared,aw,bw,ties}}
+function browserHelp(){const ua=navigator.userAgent;if(/iPhone|iPad/i.test(ua))return"Safari: нажмите «Поделиться» → «На экран Домой». Во встроенном браузере сначала выберите «Открыть в Safari».";if(/MiuiBrowser/i.test(ua))return"Браузер Xiaomi не всегда устанавливает PWA. Скопируйте ссылку, откройте её в Google Chrome и выберите ⋮ → «До��авить на главный экран».";if(/SamsungBrowser/i.test(ua))return"Samsung Internet: откройте меню ☰ → «Добавить страницу в» → «Главный экран».";return"Google Chrome на Android: откройте меню ⋮ → «Добавить на главный экран» или «Установить приложение»."}
+
 function renderModal() {
   if (!modal) return "";
   const shell = body => `<div class="modal-backdrop" data-action="close-modal"><section class="modal" role="dialog" aria-modal="true" data-modal><button class="modal-close" data-action="close-modal" aria-label="Закрыть">×</button>${body}</section></div>`;
+
+  if(modal==="import"){const known=state.knownPlayers||[];return shell(`<span class="eyebrow">Ручной архив</span><h2>Добавить прошлую партию</h2><form id="import-setup-form"><label class="field-label">Дата игры</label><input class="text-input" type="date" name="date" max="${new Date().toISOString().slice(0,10)}" required><span class="field-label">Участники</span><div class="import-profiles">${known.map(p=>`<label><input type="checkbox" name="profile" value="${p.id}"><span>${esc(p.emoji)} ${esc(p.name)}</span></label>`).join("")}</div><button class="button primary full" type="submit">Продолжить к раундам</button></form>`)}
+  if(modal==="import-rounds"){const profiles=manualImport.profileIds.map(id=>state.knownPlayers.find(p=>p.id===id));return shell(`<span class="eyebrow">${manualImport.date}</span><h2>Результаты по раундам</h2><form id="import-game-form"><div class="import-rounds">${Array.from({length:manualImport.roundCount},(_,i)=>`<fieldset class="import-round"><legend>Раунд ${i+1}</legend>${profiles.map(p=>`<label><span>${esc(p.emoji)} ${esc(p.name)}</span><input type="number" min="0" max="999" inputmode="numeric" name="r${i}-${p.id}" placeholder="0"></label>`).join("")}</fieldset>`).join("")}</div><div class="import-actions"><button type="button" class="button secondary" data-action="import-add-round">＋ Раунд</button><button type="button" class="button secondary" data-action="import-remove-round">− Раунд</button></div><div class="import-totals">${profiles.map(p=>`<span>${esc(p.emoji)} ${esc(p.name)}: <b data-import-total="${p.id}">0</b></span>`).join("")}</div><button class="button primary full" type="submit">Сохранить прошлую партию</button></form>`)}
+  if(modal==="player-card"){const p=(state.knownPlayers||[]).find(x=>x.id===selectedProfileId);if(!p)return"";const c=careerFor(p.id),awards=awardsFor(p.id),opponents=(state.knownPlayers||[]).filter(x=>x.id!==p.id&&state.archive.some(g=>g.players.some(y=>y.profileId===p.id)&&g.players.some(y=>y.profileId===x.id)));const opp=opponents.find(x=>x.id===selectedOpponentId)||opponents[0],h=opp?headToHead(p.id,opp.id):null;return shell(`<div class="profile-hero"><span>${esc(p.emoji)}</span><div><span class="eyebrow">Личная карточка</span><h2>${esc(p.name)}</h2></div></div><div class="award-list">${awards.map(x=>`<span>🏅 ${x}</span>`).join("")}</div><div class="profile-metrics"><div><b>${c.games}</b><small>игр</small></div><div><b>${c.wins}</b><small>побед</small></div><div><b>${c.average}</b><small>среднее</small></div><div><b>${c.best}</b><small>рекорд</small></div></div>${opponents.length?`<h3>Личные встречи</h3><div class="opponent-list">${opponents.map(x=>`<button class="${opp?.id===x.id?"active":""}" data-action="select-opponent" data-id="${x.id}">${esc(x.emoji)} ${esc(x.name)}</button>`).join("")}</div>${h?`<div class="h2h"><b>${esc(p.name)} ${h.aw}</b><span>${h.shared} общих игр · ничьи ${h.ties}</span><b>${h.bw} ${esc(opp.name)}</b></div>`:""}`:"<p>Пока нет совместных партий с другими игроками.</p>"}`)}
   if (modal === "add") {
     const activeIds = new Set(state.currentGame.players.map(p => p.profileId));
     const returning = (state.knownPlayers || []).filter(p => !activeIds.has(p.id));
@@ -392,7 +406,7 @@ function renderModal() {
       ${[...state.currentGame.players].sort((a,b)=>a.seat-b.seat).map(p=>`<label class="edit-score"><span><i>${esc(p.emoji)}</i><b>${esc(p.name)}</b></span><input type="number" inputmode="numeric" min="0" max="999" name="${p.id}" value="${round.scores[p.id] ?? 0}" required></label>`).join("")}
       <button class="button primary large full" type="submit" ${busy ? "disabled" : ""}>${icon("save")} Сохранить изменения</button></form>`);
   }
-  if (modal === "share") return shell(`<span class="eyebrow">Комната ${roomCode}</span><h2>Позвать игроков</h2><div class="qr-card"><img src="${"https:"+"//api.qrserver.com/v1/create-qr-code/?size=320x320&margin=8&data="+encodeURIComponent(location.href)}" alt="QR-код ссылки на комнату"><div><b>Наведите камеру</b><small>Все откроют ту же комнату</small></div></div><div class="share-actions"><button class="button primary full" data-action="copy-link">${icon("copy")} Скопировать ссылку</button><button class="button secondary full" data-action="install-app">${icon("download")} Установить приложение</button></div><p class="install-note">На iPhone: откройте сайт в Safari → «Поделиться» → «На экран Домой». На Android нажмите кнопку установки выше.</p>`);
+  if (modal === "share") return shell(`<span class="eyebrow">Комната ${roomCode}</span><h2>Позвать игроков</h2><div class="qr-card"><img src="${"https:"+"//api.qrserver.com/v1/create-qr-code/?size=320x320&margin=8&data="+encodeURIComponent(location.href)}" alt="QR-код ссылки на комнату"><div><b>Наведите камеру</b><small>Все откроют ту же комнату</small></div></div><div class="share-actions"><button class="button primary full" data-action="copy-link">${icon("copy")} Скопировать ссылку</button><button class="button secondary full" data-action="install-app">${icon("download")} Установить приложение</button></div><p class="install-note">${browserHelp()}</p>`);
   if (modal === "reset") return shell(`<span class="eyebrow">Новая партия</span><h2>Начать новую игру?</h2><p class="modal-text">${state.currentGame.rounds.length ? "Текущий результат сохранится в архиве без праздничного экрана." : "Текущий пустой стол будет сброшен."}</p><label class="check-row"><input id="keep-players" type="checkbox" checked><span><b>Оставить тех же игроков</b><small>Счёт начнётся с нуля</small></span></label><button class="button primary large full" data-action="reset-game" ${busy ? "disabled" : ""}>${icon("refresh")} Начать новую игру</button>`);
   if (modal === "finish") return shell(`<span class="eyebrow">Финиш партии</span><h2>Завершить игру?</h2><p class="modal-text">Результат попадёт в архив и статистику. Победит игрок с на��меньшим счётом.</p><label class="check-row"><input id="keep-players" type="checkbox" checked><span><b>Оставить тех же игроков</b><small>Новая партия начнётся с нулевого счёта</small></span></label><button class="button finish large full" data-action="finish-game" ${busy ? "disabled" : ""}>${icon("flag")} Завершить и показать победителя</button>`);
   if (modal === "winner" && celebrationGame) {
@@ -429,6 +443,11 @@ root.addEventListener("click", async (event) => {
   if (button.dataset.modal != null) return;
   if (button.dataset.tab) { tab = button.dataset.tab; render(); scrollTo({ top: 0, behavior: "smooth" }); return; }
   const action = button.dataset.action;
+  if(action==="open-import"){manualImport=null;modal="import";render();return}
+  if(action==="import-add-round"){manualImport.roundCount++;render();return}
+  if(action==="import-remove-round"&&manualImport.roundCount>1){manualImport.roundCount--;render();return}
+  if(action==="open-player-card"){selectedProfileId=button.dataset.id;selectedOpponentId=null;modal="player-card";render();return}
+  if(action==="select-opponent"){selectedOpponentId=button.dataset.id;render();return}
   if (action === "stats-period") { statsPeriod = button.dataset.period || "all"; render(); return; }
   if (action === "open-add") { selectedEmoji = EMOJIS[state.currentGame.players.length % EMOJIS.length]; modal = "add"; render(); setTimeout(() => document.querySelector("#player-name")?.focus(), 0); }
   if (action === "close-modal" && (button.classList.contains("modal-close") || !event.target.closest("[data-modal]"))) { modal = null; editingRoundId = null; editingPlayerId = null; render(); }
@@ -447,7 +466,7 @@ root.addEventListener("click", async (event) => {
   if (action === "copy-link") { try { await navigator.clipboard.writeText(location.href); showToast("Ссылка на комнату скопирована"); } catch { prompt("Скопируйте ссылку", location.href); } }
   if (action === "install-app") {
     if (deferredInstallPrompt) { deferredInstallPrompt.prompt(); await deferredInstallPrompt.userChoice; deferredInstallPrompt = null; modal = null; render(); }
-    else showToast("Откройте меню браузера и выберите «Установить приложение»", "ok");
+    else showToast(browserHelp(), "ok");
   }
 });
 
@@ -457,20 +476,27 @@ function refreshDraftUi() {
     const has=Object.prototype.hasOwnProperty.call(drafts,input.dataset.draftPlayer),row=input.closest(".score-row");
     row?.classList.toggle("score-ready",has);
     const status=row?.querySelector(".score-person small"),mark=row?.querySelector(".number-wrap > span");
-    if(status)status.textContent=has?"результат сохранён":"значение не введено";
+    if(status)status.textContent=has?"результат сохра��ён":"значение не введено";
     if(mark)mark.textContent=has?"✓":"＋";
     if(document.activeElement!==input)input.value=has?drafts[input.dataset.draftPlayer]:"";
     input.disabled=false;
   });
   const count=Object.keys(drafts).length,ready=players.length>0&&players.every(p=>Object.prototype.hasOwnProperty.call(drafts,p.id));
   const hint=document.querySelector(".score-section .section-heading .hint");if(hint)hint.textContent=`Заполнено ${count} из ${players.length}`;
-  const button=document.querySelector('#round-form button[type="submit"]');if(button){button.disabled=!ready||busy;button.innerHTML=`${icon("save")} ${ready?"Завершить раунд":"Заполните все результаты"}`;}
+  const button=document.querySelector('#round-form button[type="submit"]');if(button){button.disabled=!ready||busy||!navigator.onLine||pendingWrites.length>0;button.innerHTML=`${icon("save")} ${ready?"Завершить раунд":"Заполните все результаты"}`;}
 }
 
-root.addEventListener("change", async event => { const input=event.target.closest("[data-draft-player]");if(!input)return;const raw=input.value.trim(),score=Number(raw);if(raw!==""&&(!Number.isInteger(score)||score<0||score>999)){showToast("Введите целое число от 0 до 999","error");return}try{input.disabled=true;const drafts=raw===""?await api.clearDraftScore(input.dataset.draftPlayer):await api.setDraftScore(input.dataset.draftPlayer,score);state.currentGame.draftScores=drafts;lastStateHash=JSON.stringify(state);refreshDraftUi();showToast(raw===""?"Результат очищен":"Результат сохранён")}catch(e){input.disabled=false;showToast(e.message||"Не удалось сохранить","error")}});
+root.addEventListener("input",event=>{if(!event.target.closest("#import-game-form"))return;for(const id of manualImport.profileIds){let sum=0;document.querySelectorAll(`[name$="-${id}"]`).forEach(x=>sum+=Number(x.value)||0);const out=document.querySelector(`[data-import-total="${id}"]`);if(out)out.textContent=sum}});
+
+function updateSyncBadge(){const el=document.querySelector(".sync-badge");if(!el)return;el.className=`sync-badge ${!navigator.onLine?"offline":pendingWrites.length?"pending":"saved"}`;el.textContent=!navigator.onLine?`Нет соединения · не отправлено ${pendingWrites.length}`:pendingWrites.length?`Не отправлено: ${pendingWrites.length}`:"Всё сохранено"}
+function queueDraft(type,playerId,score){pendingWrites=pendingWrites.filter(x=>x.playerId!==playerId);pendingWrites.push({type,playerId,score});localStorage.setItem(pendingKey,JSON.stringify(pendingWrites));if(type==="clear")delete state.currentGame.draftScores[playerId];else state.currentGame.draftScores[playerId]=score;refreshDraftUi();updateSyncBadge()}
+async function flushPending(){if(!cloudMode||!navigator.onLine||!pendingWrites.length)return;for(const op of [...pendingWrites]){try{op.type==="clear"?await api.clearDraftScore(op.playerId):await api.setDraftScore(op.playerId,op.score);pendingWrites=pendingWrites.filter(x=>x!==op);localStorage.setItem(pendingKey,JSON.stringify(pendingWrites))}catch{break}}updateSyncBadge();if(!pendingWrites.length)syncStateNow()}
+root.addEventListener("change", async event => {const input=event.target.closest("[data-draft-player]");if(!input)return;const raw=input.value.trim(),score=Number(raw),type=raw===""?"clear":"set";if(raw!==""&&(!Number.isInteger(score)||score<0||score>999)){showToast("Введите целое число от 0 до 999","error");return}if(cloudMode&&!navigator.onLine){queueDraft(type,input.dataset.draftPlayer,score);showToast("Нет соединения — сохранили на устройстве");return}try{input.disabled=true;updateSyncBadge();const drafts=type==="clear"?await api.clearDraftScore(input.dataset.draftPlayer):await api.setDraftScore(input.dataset.draftPlayer,score);state.currentGame.draftScores=drafts;lastStateHash=JSON.stringify(state);refreshDraftUi();updateSyncBadge();showToast(type==="clear"?"Результат очищен":"Результат сохранён")}catch(e){if(cloudMode){queueDraft(type,input.dataset.draftPlayer,score);showToast("Не отправлено — повторим автоматически","error")}else{input.disabled=false;showToast(e.message||"Не удалось сохранить","error")}}});
 
 root.addEventListener("submit", (event) => {
   event.preventDefault();
+  if(event.target.id==="import-setup-form"){const fd=new FormData(event.target),ids=fd.getAll("profile"),date=fd.get("date");if(ids.length<2){showToast("Выберите минимум двух игроков","error");return}manualImport={date,profileIds:ids,roundCount:5};modal="import-rounds";render();return}
+  if(event.target.id==="import-game-form"){const fd=new FormData(event.target),rounds=[];for(let i=0;i<manualImport.roundCount;i++){const row={};let any=false,all=true;for(const id of manualImport.profileIds){const v=fd.get(`r${i}-${id}`);if(v!==""){any=true;row[id]=Number(v)}else all=false}if(any&&!all){showToast(`Заполните весь раунд ${i+1}`,"error");return}if(any)rounds.push(row)}if(!rounds.length){showToast("Добавьте хотя бы один раунд","error");return}mutate(()=>api.importGame(`${manualImport.date}T12:00:00`,manualImport.profileIds,rounds),"Прошлая партия добавлена");return}
   if (event.target.id === "player-form") { const name = new FormData(event.target).get("name")?.trim(); if (name) mutate(() => api.addPlayer(name, selectedEmoji), `${name} за столом`); }
   if (event.target.id === "edit-icon-form") { mutate(() => api.updatePlayerIcon(editingPlayerId, selectedEmoji), "Значок игрока обновлён"); }
   if (event.target.id === "round-form") mutate(() => api.finalizeRound(), "Раунд завершён");
@@ -497,7 +523,7 @@ function scheduleSync(delay = 5000) {
 async function syncStateNow() {
   if (!cloudMode || document.hidden) return;
   if (syncInFlight || busy || modal || document.activeElement?.matches("input")) {
-    scheduleSync(5000);
+    scheduleSync(5000);flushPending();
     return;
   }
   syncInFlight = true;
@@ -523,7 +549,8 @@ document.addEventListener("visibilitychange", () => {
   else syncStateNow();
 });
 window.addEventListener("focus", () => { if (cloudMode && !document.hidden) syncStateNow(); });
-window.addEventListener("online", () => { syncRetryDelay = 5000; syncStateNow(); });
+window.addEventListener("online", () => { syncRetryDelay=5000;updateSyncBadge();flushPending(); });
+window.addEventListener("offline",()=>{updateSyncBadge();refreshDraftUi()});
 
 async function init() {
   render();
