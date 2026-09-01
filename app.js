@@ -451,7 +451,23 @@ root.addEventListener("click", async (event) => {
   }
 });
 
-root.addEventListener("change", async event => { const input=event.target.closest("[data-draft-player]");if(!input)return;const raw=input.value.trim(),score=Number(raw);if(raw!==""&&(!Number.isInteger(score)||score<0||score>999)){showToast("Введите целое число от 0 до 999","error");return}try{input.disabled=true;const drafts=raw===""?await api.clearDraftScore(input.dataset.draftPlayer):await api.setDraftScore(input.dataset.draftPlayer,score);state.currentGame.draftScores=drafts;lastStateHash=JSON.stringify(state);render();showToast(raw===""?"Результат очищен":"Результат сохранён")}catch(e){input.disabled=false;showToast(e.message||"Не удалось сохранить","error")}});
+function refreshDraftUi() {
+  const drafts=state.currentGame.draftScores||{},players=state.currentGame.players;
+  document.querySelectorAll("[data-draft-player]").forEach(input=>{
+    const has=Object.prototype.hasOwnProperty.call(drafts,input.dataset.draftPlayer),row=input.closest(".score-row");
+    row?.classList.toggle("score-ready",has);
+    const status=row?.querySelector(".score-person small"),mark=row?.querySelector(".number-wrap > span");
+    if(status)status.textContent=has?"результат сохранён":"значение не введено";
+    if(mark)mark.textContent=has?"✓":"＋";
+    if(document.activeElement!==input)input.value=has?drafts[input.dataset.draftPlayer]:"";
+    input.disabled=false;
+  });
+  const count=Object.keys(drafts).length,ready=players.length>0&&players.every(p=>Object.prototype.hasOwnProperty.call(drafts,p.id));
+  const hint=document.querySelector(".score-section .section-heading .hint");if(hint)hint.textContent=`Заполнено ${count} из ${players.length}`;
+  const button=document.querySelector('#round-form button[type="submit"]');if(button){button.disabled=!ready||busy;button.innerHTML=`${icon("save")} ${ready?"Завершить раунд":"Заполните все результаты"}`;}
+}
+
+root.addEventListener("change", async event => { const input=event.target.closest("[data-draft-player]");if(!input)return;const raw=input.value.trim(),score=Number(raw);if(raw!==""&&(!Number.isInteger(score)||score<0||score>999)){showToast("Введите целое число от 0 до 999","error");return}try{input.disabled=true;const drafts=raw===""?await api.clearDraftScore(input.dataset.draftPlayer):await api.setDraftScore(input.dataset.draftPlayer,score);state.currentGame.draftScores=drafts;lastStateHash=JSON.stringify(state);refreshDraftUi();showToast(raw===""?"Результат очищен":"Результат сохранён")}catch(e){input.disabled=false;showToast(e.message||"Не удалось сохранить","error")}});
 
 root.addEventListener("submit", (event) => {
   event.preventDefault();
