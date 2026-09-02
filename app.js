@@ -330,6 +330,7 @@ function renderGame(game, ranks, leader, danger) {
         <div><b>${game.rounds.length}</b><span>раундов</span></div>
         <div><b>${danger ? "66+" : WIN_LINE}</b><span>${danger ? "игра продолжается" : "ориентир"}</span></div>
       </div>
+      ${game.players.length?`<details class="hero-game-menu"><summary aria-label="Управление партией" title="Управление партией">•••</summary><div>${game.rounds.length?`<button data-action="undo">${icon("undo")} Отменить последний раунд</button><button data-action="undo-change">${icon("undo")} Отменить исправление</button>`:""}<button data-action="open-reset">${icon("refresh")} Новая игра</button>${game.rounds.length?`<button class="danger" data-action="open-finish">${icon("flag")} Завершить игру</button>`:""}</div></details>`:""}
     </section>
 
     ${dailyCard(game)}
@@ -339,8 +340,6 @@ function renderGame(game, ranks, leader, danger) {
     </div>
 
     ${game.players.length ? `<section class="players-grid">${ranks.map((p, i) => renderPlayerCard(p, i, game)).join("")}</section>` : renderEmptyPlayers()}
-    ${game.players.length?`<details class="mobile-game-controls"><summary>••• Управление партией</summary><div>${game.rounds.length?`<button class="button secondary" data-action="undo">${icon("undo")} Отменить раунд</button>`:""}<button class="button secondary" data-action="open-reset">${icon("refresh")} Новая игра</button>${game.rounds.length?`<button class="button finish" data-action="open-finish">${icon("flag")} Завершить игру</button>`:""}</div></details>`:""}
-
     ${game.players.length >= 2 ? renderScoreEntry(game, danger) : ""}
     ${game.rounds.length ? renderRounds(game) : ""}
     </div>
@@ -420,7 +419,7 @@ function renderStatistics() {
   const ranked=items.map((p,i)=>({...p,rank:i+1}));
   return `<section class="stats-page"><div class="archive-title"><span class="eyebrow">Личная история</span><h1>Статистика игроков</h1><div class="period-tabs">${renderPeriods()}</div></div>
   <div class="stats-table-wrap"><table class="stats-table"><thead><tr><th>Игрок</th><th>Игры</th><th>Победы</th><th>% побед</th><th>Среднее</th><th>Рекорд</th><th>Серия</th><th>Динамика</th></tr></thead><tbody>${ranked.map(p=>`<tr><td>${player(p)}</td><td>${p.games}</td><td>${p.wins}</td><td><strong>${p.winRate}%</strong></td><td>${p.average}</td><td>${p.best}</td><td>${p.streak} <small>(макс. ${p.bestStreak})</small></td><td>${renderTrend(p)}</td></tr>`).join("")}</tbody></table></div>
-  <div class="stats-mobile"><div class="mobile-podium">${ranked.slice(0,3).map((p,i)=>`<button data-action="open-player-card" data-id="${p.profileId||""}" class="place-${i+1}"><em class="podium-medal">${["🥇","🥈","🥉"][i]}</em><span>${esc(p.emoji)}</span><b>${esc(p.name)}</b><strong>${p.wins} <small>${plural(p.wins,"победа","победы","побед")}</small></strong><small>${p.winRate}% · ${p.games} игр</small></button>`).join("")}</div><div class="mobile-ranking">${ranked.map(p=>`<button data-action="open-player-card" data-id="${p.profileId||""}"><span class="stat-rank">${p.rank}</span><i>${esc(p.emoji)}</i><b>${esc(p.name)}</b><small>${p.games} игр · ${p.winRate}% · среднее ${p.average}</small><strong>${p.wins} ${plural(p.wins,"победа","победы","побед")}</strong><em>›</em></button>`).join("")}</div></div>
+  <div class="stats-mobile"><div class="mobile-podium">${ranked.slice(0,3).map((p,i)=>`<button data-action="open-player-card" data-id="${p.profileId||""}" class="place-${i+1}"><em class="podium-medal">${["🥇","🥈","🥉"][i]}</em><span>${esc(p.emoji)}</span><b>${esc(p.name)}</b><strong>${p.wins} <small>${plural(p.wins,"победа","победы","побед")}</small></strong><small>${p.winRate}% · ${p.games} игр</small></button>`).join("")}</div>${ranked.length>3?`<h3 class="other-players-title">Остальные игроки</h3><div class="mobile-ranking">${ranked.slice(3).map(p=>`<button data-action="open-player-card" data-id="${p.profileId||""}"><span class="stat-rank">${p.rank}</span><i>${esc(p.emoji)}</i><b>${esc(p.name)}</b><small>${p.games} игр · ${p.winRate}% · среднее ${p.average}</small><strong>${p.wins} ${plural(p.wins,"победа","победы","побед")}</strong><em>›</em></button>`).join("")}</div>`:""}</div>
   ${renderRecordBook()}
   <details class="stats-help"><summary>Что означают показатели?</summary><dl><div><dt>Среднее</dt><dd>Средний итоговый штрафной счёт за партию. Чем меньше, тем лучше.</dd></div><div><dt>Рекорд</dt><dd>Самый низкий итоговый счёт игрока за выбранный период.</dd></div><div><dt>Серия</dt><dd>Победы подряд сейчас; в скобках — лучшая серия за период.</dd></div><div><dt>Динамика</dt><dd>Последние результаты слева направо. Низкий столбик лучше высокого.</dd></div></dl></details>${renderAwardsHub()}</section>`;
 }
