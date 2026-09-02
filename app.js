@@ -3,6 +3,7 @@ const LIMIT = 10;
 const WIN_LINE = 66;
 const root = document.querySelector("#app");
 const cfg = window.KOROVA_CONFIG || {};
+const TV_MODE = new URLSearchParams(location.search).get("display") === "tv";
 const cloudMode = /^https:\/\//.test(cfg.SUPABASE_URL || "") && Boolean(cfg.SUPABASE_ANON_KEY);
 
 let roomCode = getRoomCode();
@@ -254,11 +255,16 @@ async function mutate(action, success) {
   }
 }
 
+function tvUrl(){const u=new URL(location.href);u.searchParams.set("room",roomCode);u.searchParams.set("display","tv");return u.toString()}
+function todayGames(){const d=new Date().toLocaleDateString("sv-SE",{timeZone:"Europe/Minsk"});return(state.archive||[]).filter(g=>new Date(g.finishedAt||g.startedAt).toLocaleDateString("sv-SE",{timeZone:"Europe/Minsk"})===d)}
+function renderTv(){const g=state.currentGame,r=ranking(g),last=g.rounds.at(-1),today=todayGames(),leader=r[0];document.body.classList.add("tv-mode");root.innerHTML=`<main class="tv-shell"><header><div class="tv-brand"><span>🐮</span><div><b>Коровосчёт 006</b><small>Большое табло · комната ${roomCode}</small></div></div><div class="tv-tools"><span class="tv-live ${navigator.onLine?"":"offline"}">● ${navigator.onLine?"В эфире":"Нет связи"}</span><button data-action="copy-tv-link">Ссылка</button><button data-action="tv-fullscreen">Во весь экран</button><a href="?room=${roomCode}">Выйти</a></div></header>${!g.players.length?`<section class="tv-empty"><div>🎴</div><h1>Ждём игроков</h1><p>Добавьте участников с телефона или ноутбука.</p></section>`:g.rounds.length?`<section class="tv-stage"><div class="tv-heading"><div><small>Текущая партия</small><h1>Раунд ${g.rounds.length+1}</h1></div><div><b>${leader?`${esc(leader.emoji)} ${esc(leader.name)}`:"—"}</b><small>сейчас впереди</small></div></div><div class="tv-board">${r.map((x,i)=>`<article class="${i===0?"leader":""} ${x.total>=66?"over66":""}"><span class="tv-place">${i+1}</span><span class="tv-avatar">${esc(x.emoji)}</span><b>${esc(x.name)}</b><em>${last?`+${last.scores[x.id]??0}`:""}</em><strong>${x.total}</strong><small>${x.total>=66?"66+ · игра продолжается":"очков"}</small></article>`).join("")}</div><footer><span>Сегодня сыграно: <b>${today.length}</b></span><span>Последнее обновление: <b>${new Date().toLocaleTimeString("ru-RU",{hour:"2-digit",minute:"2-digit"})}</b></span></footer></section>`:`<section class="tv-wait"><div><small>Состав готов · ${g.players.length} ${plural(g.players.length,"игрок","игрока","игроков")}</small><h1>Начинаем игру</h1><p>Прогноз перед первым раундом</p></div>${dailyCard(g)}<div class="tv-roster">${g.players.map(x=>`<span>${esc(x.emoji)} <b>${esc(x.name)}</b></span>`).join("")}</div></section>`}</main>`}
 function render() {
   if (!state) {
     root.innerHTML = `<main class="loading"><div class="logo-card mini">🐮<b>006</b></div><p>Раскладываем карты…</p></main>`;
     return;
   }
+  if(TV_MODE){renderTv();return}
+  document.body.classList.remove("tv-mode");
   const game = state.currentGame;
   const ranks = ranking(game);
   const leader = ranks[0];
@@ -270,7 +276,7 @@ function render() {
           <span class="brand-card"><span>🐮</span><b>006</b></span>
           <span><strong>Коровосчёт</strong><small>Не бери шестую</small></span>
         </a>
-        <div class="room-tools"><button class="admin-pill ${isAdmin()?"active":""}" data-action="open-admin">${isAdmin()?"🔓 Организатор":"🔒 Войти"}</button><span class="sync-badge ${!navigator.onLine?"offline":pendingWrites.length?"pending":"saved"}">${!navigator.onLine?`Нет соединения · не отправлено ${pendingWrites.length}`:pendingWrites.length?`Не отправлено: ${pendingWrites.length}`:"Всё сохранено"}</span>
+        <div class="room-tools"><button class="tv-open" data-action="open-tv" title="Большое табло">📺 <span>Табло</span></button><button class="admin-pill ${isAdmin()?"active":""}" data-action="open-admin">${isAdmin()?"🔓 Организатор":"🔒 Войти"}</button><span class="sync-badge ${!navigator.onLine?"offline":pendingWrites.length?"pending":"saved"}">${!navigator.onLine?`Нет соединения · не отправлено ${pendingWrites.length}`:pendingWrites.length?`Не отправлено: ${pendingWrites.length}`:"Всё сохранено"}</span>
           <span class="room-label">Комната <b>${roomCode}</b></span>
           <button class="icon-btn" data-action="open-share" title="Поделиться и установить" aria-label="Поделиться и установить">${icon("share")}</button>
         </div>
@@ -517,6 +523,9 @@ root.addEventListener("click", async (event) => {
   if(action==="award-tab"){gamificationTab=button.dataset.tabId;awardsOpen=true;render();return}
   if(action==="toggle-import-mode"){const quick=button.dataset.mode==="quick";if(manualImport.quick!==quick){manualImport.quick=quick;manualImport.roundCount=quick?1:5}render();return}
   if(action==="delete-archive"&&confirm("Удалить эту архивную партию?")){mutate(()=>api.deleteGame(button.dataset.id),"Партия удалена");return}
+  if(action==="open-tv"){window.open(tvUrl(),"_blank","noopener");return}
+  if(action==="copy-tv-link"){try{await navigator.clipboard.writeText(tvUrl());showToast("Ссылка на табло скопирована")}catch{prompt("Ссылка на табло",tvUrl())}return}
+  if(action==="tv-fullscreen"){try{await document.documentElement.requestFullscreen();if(navigator.wakeLock)window.tvWakeLock=await navigator.wakeLock.request("screen")}catch{}return}
   if(action==="share-final-card"&&celebrationGame){shareFinalCard(celebrationGame);return}
   if(action==="open-import"){manualImport=null;modal="import";render();return}
   if(action==="import-add-round"){manualImport.roundCount++;render();return}
