@@ -22,6 +22,7 @@ let selectedProfileId = null, selectedOpponentId = null, manualImport = null;
 let gamificationTab = "temporary";
 let awardsOpen = false;
 let olderArchiveOpen = false, archiveShown = 10, selectedArchiveId = null;
+let insightIndex = 0, insightTouch = null;
 const pendingKey = `korova-pending-${roomCode}`;
 let pendingWrites = JSON.parse(localStorage.getItem(pendingKey) || "[]");
 const adminKey=`korova-admin-${roomCode}`;let adminSession=JSON.parse(localStorage.getItem(adminKey)||"null");
@@ -291,7 +292,32 @@ function render() {
   `;
 }
 
-function dailyCard(game){if(state.archive.length<3)return"";const active=(game.players||[]).map(x=>(state.knownPlayers||[]).find(p=>p.id===x.profileId)).filter(Boolean),pool=active.length>=2?active:(state.knownPlayers||[]).filter(p=>careerFor(p.id).games).slice(0,6),size=active.length>=2?active.length:null;if(!pool.length)return"";const forecasts=pool.map(p=>{const all=careerFor(p.id),same=all.rows.filter(r=>!size||r.game.players.length===size),base=same.length?same:all.rows,wins=base.filter(r=>r.won).length,raw=(wins+1)/(base.length+2);return{p,wins,games:base.length,raw,exact:Boolean(size&&same.length)}}).sort((x,y)=>y.raw-x.raw),sum=forecasts.reduce((s,x)=>s+x.raw,0)||1;forecasts.forEach(x=>x.chance=Math.round(x.raw/sum*100));let perfect=null;for(let i=0;i<pool.length&&!perfect;i++)for(let j=i+1;j<pool.length;j++){const h=headToHead(pool[i].id,pool[j].id);if(h.shared>=2&&(h.aw===h.shared||h.bw===h.shared)){const winner=h.aw===h.shared?pool[i]:pool[j],loser=h.aw===h.shared?pool[j]:pool[i];perfect={winner,loser,shared:h.shared};break}}const top=forecasts[0],note=perfect?`${esc(perfect.winner.emoji)} ${esc(perfect.winner.name)} выиграл${perfect.winner.name.endsWith("а")?"а":""} у ${esc(perfect.loser.name)} во всех ${perfect.shared} личных встречах`:`${esc(top.p.name)}: ${top.wins} побед из ${top.games} сопоставимых партий`;return `<aside class="daily-card smart-card"><header><div><span>🎴 Аналитика перед игрой</span><b>${size?`Прогноз на стол из ${size} игроков`:"Интересное из архива"}</b></div><small>по ${state.archive.length} партиям</small></header><div class="forecast-lead"><span>${esc(top.p.emoji)}</span><div><small>фаворит по истории</small><b>${esc(top.p.name)}</b><p>${top.exact?`учтены партии с ${size} игроками`:"использована общая статистика"}</p></div><strong>${top.chance}%</strong></div><div class="forecast-list">${forecasts.slice(0,3).map((x,i)=>`<div><span>${i+1}. ${esc(x.p.emoji)} ${esc(x.p.name)}</span><b>${x.chance}%</b></div>`).join("")}</div><p class="daily-insight">💡 ${note}</p><small class="forecast-disclaimer">Игровой прогноз, а не точная вероятность</small></aside>`}
+function buildDailyInsights(game){
+  if(state.archive.length<3)return[];
+  const active=(game.players||[]).map(x=>(state.knownPlayers||[]).find(p=>p.id===x.profileId)).filter(Boolean),pool=active.length>=2?active:(state.knownPlayers||[]).filter(p=>careerFor(p.id).games).slice(0,8),size=active.length>=2?active.length:null;
+  if(!pool.length)return[];
+  const forecasts=pool.map(p=>{const all=careerFor(p.id),same=all.rows.filter(r=>!size||r.game.players.length===size),base=same.length>=3?same:all.rows,wins=base.filter(r=>r.won).length,raw=(wins+1)/(base.length+2);return{p,wins,games:base.length,raw,exact:Boolean(size&&same.length>=3),sameGames:same.length}}).sort((x,y)=>y.raw-x.raw),sum=forecasts.reduce((s,x)=>s+x.raw,0)||1;
+  forecasts.forEach(x=>x.chance=Math.max(1,Math.round(x.raw/sum*100)));
+  const top=forecasts[0],confidence=top.games>=10?"высокая":top.games>=5?"средняя":"низкая";
+  const forecast={key:"forecast",kicker:"Аналитика перед игрой",title:size?`Прогноз на стол из ${size} игроков`:"Прогноз по архиву",body:`<div class="insight-lead"><span>${esc(top.p.emoji)}</span><div><small>фаворит по истории</small><b>${esc(top.p.name)}</b><p>${top.exact?`учтены партии с ${size} игроками`:"использована общая статистика"}</p></div><strong>${top.chance}%</strong></div><div class="insight-bars">${forecasts.slice(0,3).map(x=>`<div><span>${esc(x.p.emoji)} ${esc(x.p.name)}</span><i><u style="width:${x.chance}%"></u></i><b>${x.chance}%</b></div>`).join("")}</div><p class="insight-note">Достоверность: <b>${confidence}</b> · выборка ${top.games} игр</p>`};
+  const odds={key:"odds",kicker:"Коровьи коэффициенты",title:"Шансы сегодняшнего стада",body:`<div class="odds-grid">${forecasts.slice(0,4).map((x,i)=>`<div><small>${i+1}</small><span>${esc(x.p.emoji)} <b>${esc(x.p.name)}</b></span><strong>×${(100/x.chance).toFixed(1).replace(".",",")}</strong><em>${x.chance}%</em></div>`).join("")}</div><p class="insight-note">Игровая оценка по архиву, не настоящая вероятность</p>`};
+  const analytics=pool.map(p=>({p,m:playerAnalytics(p.id)}));
+  const form=[...analytics].filter(x=>x.m.games>=6).sort((a,b)=>b.m.improvement-a.m.improvement)[0];
+  const prediction={key:"prediction",kicker:"Предсказание дня",title:form&&form.m.improvement>0?`${esc(form.p.name)} набирает форму`:`${esc(top.p.name)} выглядит увереннее всех`,body:`<div class="story-card"><span>${form&&form.m.improvement>0?"📈":"🔮"}</span><p>${form&&form.m.improvement>0?`Средний результат последних трёх партий улучшился на <b>${Math.round(form.m.improvement)} очк.</b> по сравнению с предыдущими тремя.`:`История текущего состава даёт ${esc(top.p.name)} лучший стартовый рейтинг — <b>${top.chance}%</b>.`}</p></div>`};
+  let historic=null;for(const g of state.archive){const r=ranking(g);if(r.length<2)continue;const margin=r[1].total-r[0].total;if(!historic||margin>historic.margin)historic={g,w:r[0],margin,runner:r[1]}}
+  const history=historic?{key:"history",kicker:"Из истории комнаты",title:"Самый убедительный разгром",body:`<div class="history-moment"><span>🏆</span><div><b>${esc(historic.w.emoji)} ${esc(historic.w.name)}</b><p>${formatDate(historic.g.finishedAt||historic.g.startedAt)}</p><strong>Преимущество ${historic.margin} очк.</strong><small>над ${esc(historic.runner.name)}</small></div></div>`}:null;
+  let rivalry=null;for(let i=0;i<pool.length;i++)for(let j=i+1;j<pool.length;j++){const h=headToHead(pool[i].id,pool[j].id);if(h.shared<2)continue;const weight=h.shared*2+Math.abs(h.aw-h.bw);if(!rivalry||weight>rivalry.weight)rivalry={a:pool[i],b:pool[j],h,weight}}
+  const rivalryCard=rivalry?{key:"rivalry",kicker:"Главное противостояние",title:`${esc(rivalry.a.name)} против ${esc(rivalry.b.name)}`,body:`<div class="rivalry-score"><div><span>${esc(rivalry.a.emoji)}</span><b>${rivalry.h.aw}</b><small>${plural(rivalry.h.aw,"победа","победы","побед")}</small></div><em>:</em><div><span>${esc(rivalry.b.emoji)}</span><b>${rivalry.h.bw}</b><small>${plural(rivalry.h.bw,"победа","победы","побед")}</small></div></div><p class="insight-note">${rivalry.h.shared} общих игр · ничьи ${rivalry.h.ties}</p>`}:null;
+  const milestones=analytics.map(x=>{const target=x.m.games<25?25:x.m.games<50?50:100;return{...x,target,left:target-x.m.games}}).sort((a,b)=>a.left-b.left),near=milestones[0];
+  const recordCard={key:"record",kicker:"Охота за рекордом",title:`${esc(near.p.name)} ближе всех к новой вехе`,body:`<div class="record-hunt"><span>${esc(near.p.emoji)}</span><div><strong>${near.target}</strong><small>партий</small></div><p>Осталось сыграть <b>${near.left}</b> ${plural(near.left,"партию","партии","партий")}, чтобы получить новую ветеранскую награду.</p></div>`};
+  const specialists=forecasts.filter(x=>x.sameGames>=3).sort((a,b)=>(b.wins/b.sameGames)-(a.wins/a.sameGames)),spec=specialists[0];
+  const specialist=spec?{key:"specialist",kicker:"Специалист по составу",title:`${esc(spec.p.name)} любит большие столы`,body:`<div class="story-card"><span>${esc(spec.p.emoji)}</span><p>В партиях с ${size} игроками: <b>${spec.wins} побед из ${spec.sameGames}</b>. Это лучший результат среди сегодняшних участников.</p></div>`}:null;
+  const dark=forecasts.length>1?[...forecasts].sort((a,b)=>(b.exact?b.chance:0)-(a.exact?a.chance:0))[1]:null;
+  const darkCard=dark?{key:"dark",kicker:"Тёмная лошадка",title:`Не списывайте со счетов ${esc(dark.p.name)}`,body:`<div class="story-card"><span>${esc(dark.p.emoji)}</span><p>Исторический шанс — <b>${dark.chance}%</b>. ${dark.exact?`Особенно хорошо выглядит в партиях на ${size} игроков.`:"Недавняя форма может изменить расклад."}</p></div>`}:null;
+  const extras=[odds,prediction,history,rivalryCard,recordCard,specialist,darkCard].filter(Boolean),day=Number(new Date().toLocaleDateString("sv-SE",{timeZone:"Europe/Minsk"}).replaceAll("-","")),shift=extras.length?day%extras.length:0,rotated=extras.slice(shift).concat(extras.slice(0,shift));
+  return[forecast,...rotated.slice(0,5)];
+}
+function dailyCard(game){const cards=buildDailyInsights(game);if(!cards.length)return"";insightIndex=((insightIndex%cards.length)+cards.length)%cards.length;const c=cards[insightIndex];return`<section class="daily-carousel" aria-label="Аналитика перед игрой"><header><div><span>🎴 ${c.kicker}</span><b>${c.title}</b></div><small>${insightIndex+1} из ${cards.length}</small></header><div class="insight-slide" data-insight-key="${c.key}">${c.body}</div><footer><button data-action="insight-prev" aria-label="Предыдущая карточка">‹</button><div class="insight-dots">${cards.map((x,i)=>`<button class="${i===insightIndex?"active":""}" data-action="insight-go" data-index="${i}" aria-label="Карточка ${i+1}"></button>`).join("")}</div><button data-action="insight-next" aria-label="Следующая карточка">›</button></footer></section>`}
 
 function renderGame(game, ranks, leader, danger) {
   return `
@@ -471,6 +497,9 @@ root.addEventListener("click", async (event) => {
   if(action==="open-admin"){modal="admin";render();return}
   if(action==="admin-logout"){adminSession=null;localStorage.removeItem(adminKey);modal=null;render();return}
 
+  if(action==="insight-prev"){const cards=buildDailyInsights(state.currentGame);insightIndex=(insightIndex-1+cards.length)%cards.length;render();return}
+  if(action==="insight-next"){const cards=buildDailyInsights(state.currentGame);insightIndex=(insightIndex+1)%cards.length;render();return}
+  if(action==="insight-go"){insightIndex=Number(button.dataset.index)||0;render();return}
   if(action==="open-archive-game"){selectedArchiveId=button.dataset.id;olderArchiveOpen=true;modal="archive-game";render();return}
   if(action==="show-more-archive"){olderArchiveOpen=true;archiveShown+=10;render();return}
   if(action==="award-tab"){gamificationTab=button.dataset.tabId;awardsOpen=true;render();return}
@@ -503,6 +532,9 @@ root.addEventListener("click", async (event) => {
     else showToast(browserHelp(), "ok");
   }
 });
+
+root.addEventListener("touchstart",event=>{if(!event.target.closest(".daily-carousel"))return;const t=event.touches[0];insightTouch={x:t.clientX,y:t.clientY}},{passive:true});
+root.addEventListener("touchend",event=>{if(!insightTouch||!event.target.closest(".daily-carousel"))return;const t=event.changedTouches[0],dx=t.clientX-insightTouch.x,dy=t.clientY-insightTouch.y;insightTouch=null;if(Math.abs(dx)>45&&Math.abs(dx)>Math.abs(dy)){const cards=buildDailyInsights(state.currentGame);insightIndex=(insightIndex+(dx<0?1:-1)+cards.length)%cards.length;render()}},{passive:true});
 
 function refreshDraftUi() {
   const drafts=state.currentGame.draftScores||{},players=state.currentGame.players;
