@@ -271,11 +271,11 @@ function gameEvents(game){
     if(historicHeavy>0&&heavy.v>heavyMark){c.push({priority:100,icon:'💥',tone:'record',title:'Рекорд тяжёлого раунда',text:`${heavy.p.emoji} ${heavy.p.name} получает ${heavy.v} ${plural(heavy.v,'очко','очка','очков')} — новый рекорд комнаты`});heavyMark=heavy.v}
     if(!longestShown&&historicLongest>0&&round.number>historicLongest){c.push({priority:96,icon:'⏱️',tone:'record',title:'Самая длинная партия',text:`Раунд ${round.number} превысил прежний рекорд комнаты`});longestShown=true}
     const crossed=players.filter(x=>before[x.id]<WIN_LINE&&totals[x.id]>=WIN_LINE);if(crossed.length)c.push({priority:82,icon:'🐮',tone:'warning',title:'Рубеж 66 пройден',text:`${crossed.map(x=>`${x.emoji} ${x.name}`).join(', ')} — игра продолжается до ручного завершения`});
-    if(previousLeaders.length&&leaders.map(x=>x.id).join()!=previousLeaders.join()&&leaders.length===1){const old=players.find(x=>x.id===previousLeaders[0]),lead=leaders[0];c.push({priority:92,icon:'⚡',tone:'leader',title:'Смена лидера',text:`${lead.emoji} ${lead.name} обходит ${old?`${old.emoji} ${old.name}`:'соперников'} и выходит на первое место`})}
-    if(leaders.length>1&&previousLeaders.join()!=leaders.map(x=>x.id).join())c.push({priority:88,icon:'🤝',tone:'tie',title:'Первое место разделено',text:`${leaders.map(x=>`${x.emoji} ${x.name}`).join(' и ')} — по ${best} ${plural(best,'очку','очка','очков')}`});
-    let jumper=null;for(const x of players){const was=previousOrder.indexOf(x.id),now=order.findIndex(y=>y.id===x.id),jump=was-now;if(jump>=3&&(!jumper||jump>jumper.jump))jumper={x,jump,was,now}}if(jumper)c.push({priority:72,icon:'🚀',tone:'jump',title:'Крупный рывок',text:`${jumper.x.emoji} ${jumper.x.name} поднимается с ${jumper.was+1}-го на ${jumper.now+1}-е место`});
+    if(round.number>1&&previousLeaders.length&&leaders.map(x=>x.id).join()!=previousLeaders.join()&&leaders.length===1){const old=players.find(x=>x.id===previousLeaders[0]),lead=leaders[0];c.push({priority:92,icon:'⚡',tone:'leader',title:'Смена лидера',text:`${lead.emoji} ${lead.name} обходит ${old?`${old.emoji} ${old.name}`:'соперников'} и выходит на первое место`})}
+    if(round.number>1&&leaders.length>1&&previousLeaders.join()!=leaders.map(x=>x.id).join())c.push({priority:88,icon:'🤝',tone:'tie',title:'Первое место разделено',text:`${leaders.map(x=>`${x.emoji} ${x.name}`).join(' и ')} — по ${best} ${plural(best,'очку','очка','очков')}`});
+    let jumper=null;if(round.number>1)for(const x of players){const was=previousOrder.indexOf(x.id),now=order.findIndex(y=>y.id===x.id),jump=was-now;if(jump>=3&&(!jumper||jump>jumper.jump))jumper={x,jump,was,now}}if(jumper)c.push({priority:72,icon:'🚀',tone:'jump',title:'Крупный рывок',text:`${jumper.x.emoji} ${jumper.x.name} поднимается с ${jumper.was+1}-го на ${jumper.now+1}-е место`});
     if(heavy.v>=20&&heavy.v>currentHeavy)c.push({priority:55,icon:'🔥',tone:'heavy',title:'Тяжёлый раунд',text:`${heavy.p.emoji} ${heavy.p.name} получает ${heavy.v} ${plural(heavy.v,'очко','очка','очков')} — максимум этой партии`});
-    if(round.number===1&&leaders.length===1)c.push({priority:30,icon:'🏁',tone:'leader',title:'Стартовый лидер',text:`${leaders[0].emoji} ${leaders[0].name} начинает партию с первого места`});
+    if(round.number===1){if(leaders.length===1)c.push({priority:30,icon:'🏁',tone:'leader',title:'Лидер после первого раунда',text:`${leaders[0].emoji} ${leaders[0].name} завершает первый раунд с лучшим результатом — ${best} ${plural(best,'очко','очка','очков')}`});else c.push({priority:30,icon:'🤝',tone:'tie',title:'Лидеры после первого раунда',text:`${leaders.map(x=>`${x.emoji} ${x.name}`).join(' и ')} завершили первый раунд с результатом ${best}`})};
     currentHeavy=Math.max(currentHeavy,heavy.v);const chosen=c.sort((x,y)=>y.priority-x.priority)[0];if(chosen)events.push({...chosen,roundId:round.id,round:round.number});previousOrder=order.map(x=>x.id);previousLeaders=leaders.map(x=>x.id);
   }
   return events;
@@ -391,7 +391,7 @@ function renderPlayerCard(player, rank, game) {
     <div class="player-copy">
       <span class="rank">${game.rounds.length ? `${rank + 1} место` : `игрок ${player.seat}`}</span>
       <h3>${esc(player.name)}</h3>
-      <p>${last == null ? "Очков пока нет" : `В прошлом раунде +${last}`}</p>
+      <p>${last == null ? "Очков пока нет" : game.rounds.length===1 ? `Первый раунд: +${last}` : `Последний раунд: +${last}`}</p>
     </div>
     <div class="total"><strong>${player.total}</strong><span>итого</span>${cowMarks(player.total)}</div>
     ${!game.rounds.length ? `<button class="remove" data-action="remove-player" data-id="${player.id}" title="Убрать игрока" aria-label="Убрать ${esc(player.name)}">×</button>` : ""}
