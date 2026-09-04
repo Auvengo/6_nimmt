@@ -345,3 +345,40 @@
   .winner-actions [data-action="share-winner-pane"]{min-width:0}
 }
 .winner-pane{overflow-x:hidden}
+
+
+/* v6.4.4 — полировка профиля, табло, состава и мобильной статистики */
+.premium-profile .premium-glow{position:absolute!important;right:-100px!important;top:-100px!important;width:280px!important;height:280px!important}
+.profile-v62>header{display:grid!important;grid-template-columns:76px minmax(0,1fr) auto;align-items:center;gap:14px;min-height:92px;padding:0!important;margin:0 0 10px!important}
+.profile-identity-summary{display:grid!important;align-content:center;gap:3px;min-width:0}
+.profile-identity-summary h2{margin:0!important;line-height:1.05}
+.profile-main-stats{display:flex!important;align-items:baseline;gap:8px;flex-wrap:wrap;line-height:1.25}
+.profile-v62 .profile-main-stats>strong{font-size:18px;color:var(--profile-accent);white-space:nowrap}
+.profile-main-stats>small{font-size:11px;color:rgba(255,255,255,.68)!important}
+.profile-v62 .profile-record{display:block;margin-top:1px;color:rgba(255,255,255,.76);font-size:10px}
+.profile-featured-award{margin:2px 0 14px;padding:10px 13px;border:1px solid var(--profile-accent);border-radius:10px;background:linear-gradient(100deg,color-mix(in srgb,var(--profile-accent) 24%,transparent),rgba(255,255,255,.05));display:flex;align-items:center;gap:10px;box-shadow:inset 4px 0 var(--profile-accent)}
+.profile-featured-award>span{font-size:27px}.profile-featured-award>div{display:grid}.profile-featured-award small{color:rgba(255,255,255,.58);font-size:8px;font-weight:850;letter-spacing:.11em;text-transform:uppercase}.profile-featured-award b{color:#fff;font-size:14px}
+.profile-edit-identity{white-space:nowrap}
+.card-corner,.cow-marks{display:none!important}
+.tv-avatar.profile-avatar,.tv-roster-player .profile-avatar{overflow:hidden!important;line-height:1!important;text-indent:0;flex:0 0 auto}
+.tv-avatar.profile-avatar{font-size:clamp(26px,1.85vw,37px)!important}
+.tv-roster-player .profile-avatar{font-size:clamp(20px,1.45vw,29px)!important}
+@media(min-width:761px){
+  .player-card,.game-view.active-game .player-card{min-height:100px!important;padding:13px 17px!important;gap:14px!important}
+  .player-icon,.game-view.active-game .player-icon{width:62px!important;height:74px!important;font-size:38px!important;border-radius:10px}
+  .player-icon>span{width:24px!important;height:24px!important}
+  .player-copy h3{font-size:19px!important;max-width:170px!important}
+  .player-copy .rank{font-size:9px}.player-copy p{font-size:11px}
+}
+@media(max-width:760px){
+  .profile-v62>header{grid-template-columns:58px minmax(0,1fr);gap:9px;min-height:70px;margin-bottom:9px!important}
+  .profile-identity-summary h2{font-size:27px!important}
+  .profile-v62 .profile-main-stats>strong{font-size:15px}.profile-main-stats>small{font-size:9px}
+  .profile-edit-identity{position:static!important;grid-column:2;margin:3px 0 0!important;justify-self:start;padding:5px 8px!important}
+  .profile-featured-award{margin:2px 0 11px;padding:8px 10px}.profile-featured-award>span{font-size:23px}.profile-featured-award b{font-size:12px}
+  .mobile-podium{align-items:stretch!important}
+  .mobile-podium button,.mobile-podium .place-1{padding:10px 5px 12px!important}
+  .podium-medal{display:none!important}
+  .podium-place{position:static!important;width:30px;height:30px;margin:0 0 7px;border:2px solid var(--ink);border-radius:50%;display:grid;place-items:center;background:#e7e2d6;color:var(--ink);font-style:normal;font-size:14px;font-weight:950;box-shadow:2px 2px 0 rgba(32,30,27,.28)}
+  .mobile-podium .place-1 .podium-place{background:#f4c84a}.mobile-podium .place-2 .podium-place{background:#e1e5e6}.mobile-podium .place-3 .podium-place{background:#d99a64}
+}
