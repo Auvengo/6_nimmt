@@ -175,3 +175,112 @@
 @media(max-width:1500px){.tv-roster{grid-template-columns:repeat(5,minmax(0,1fr))}.tv-roster-shell{margin-top:7px}.tv-roster span{min-height:43px;padding:5px 8px!important}.tv-roster span i{font-size:23px}.tv-roster span b{font-size:13px}}
 @media(max-height:800px) and (min-width:900px){.tv-event-layer .tv-event,.tv-dense .tv-event-layer .tv-event{width:min(640px,58vw);min-height:170px;padding:18px!important}.tv-event-layer .tv-event>span{font-size:42px!important}.tv-event-layer .tv-event b{font-size:26px!important}.tv-event-layer .tv-event p{font-size:14px!important}.tv-wait .daily-carousel,.tv-roster-shell{width:min(82vw,1450px)!important}.tv-roster-shell>small{margin-bottom:3px}.tv-roster span{min-height:38px!important}}
 @media(prefers-reduced-motion:reduce){.tv-event-layer,.tv-event-layer .tv-event{animation:none!important}}
+
+
+/* v6.4 — единая визуальная идентичность игрока и стабильная аналитическая карусель */
+.profile-surface{--profile-accent:#d7a916;--profile-soft:#fff1ad;position:relative;isolation:isolate}
+.profile-surface:after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;z-index:0;opacity:.34}
+.profile-surface>*{position:relative;z-index:1}
+.profile-surface[data-profile-pattern="dots"]:after{background-image:radial-gradient(circle,var(--profile-accent) 1.2px,transparent 1.5px);background-size:14px 14px}
+.profile-surface[data-profile-pattern="stripes"]:after{background-image:repeating-linear-gradient(135deg,transparent 0 11px,var(--profile-accent) 12px 13px,transparent 14px 23px)}
+.profile-surface[data-profile-pattern="diamonds"]:after{background-image:linear-gradient(45deg,var(--profile-accent) 1px,transparent 1px),linear-gradient(-45deg,var(--profile-accent) 1px,transparent 1px);background-size:18px 18px}
+.profile-surface[data-profile-pattern="waves"]:after{background-image:radial-gradient(ellipse at 50% 100%,transparent 0 8px,var(--profile-accent) 9px 10px,transparent 11px);background-size:24px 14px}
+.profile-avatar{background:var(--profile-soft);border-color:var(--profile-accent)!important}
+.player-card.profile-surface{box-shadow:inset 6px 0 var(--profile-accent),4px 4px 0 #d7cba9}
+.player-card.profile-surface:after{opacity:.12}
+.player-card.profile-surface.leader{box-shadow:inset 6px 0 var(--profile-accent),4px 4px 0 #d7cba9}
+.player-card .player-icon.profile-avatar{background:var(--profile-soft)}
+.known-player.profile-surface,.import-profile.profile-surface{box-shadow:inset 4px 0 var(--profile-accent)}
+.known-player.profile-surface:after,.import-profile.profile-surface:after{opacity:.09}
+.profile-compact{display:inline-flex!important;align-items:center;gap:7px;padding:4px 8px 4px 5px;border-radius:8px;box-shadow:inset 3px 0 var(--profile-accent)}
+.profile-compact:after{opacity:.1}
+.profile-compact .profile-avatar{width:29px;height:29px;display:grid;place-items:center;border:1px solid var(--profile-accent);border-radius:7px;font-size:19px;flex:0 0 auto}
+.winner-badge.profile-surface{background:linear-gradient(90deg,var(--profile-soft),#fff3bd);box-shadow:inset 5px 0 var(--profile-accent),2px 2px 0 var(--ink)}
+.archive-results li.profile-surface{padding-left:8px;padding-right:8px;border-radius:7px;box-shadow:inset 4px 0 var(--profile-accent)}
+.archive-results li.profile-surface:after{opacity:.075}
+.stat-player.profile-surface{min-height:42px;padding:4px 8px 4px 5px!important;border-radius:8px;box-shadow:inset 4px 0 var(--profile-accent)}
+.stat-player.profile-surface:after{opacity:.1}
+.mobile-podium button.profile-surface,.mobile-ranking button.profile-surface{box-shadow:inset 5px 0 var(--profile-accent)}
+.mobile-podium button.profile-surface:after,.mobile-ranking button.profile-surface:after{opacity:.1}
+
+/* стабильный размер: меняется только содержимое, а не вся страница */
+.insight-deck{height:338px;display:grid;grid-template-rows:78px minmax(0,1fr) 40px}
+.insight-deck>header{height:78px;min-height:78px}
+.insight-deck>header>div:first-child{min-width:0}
+.insight-deck>header b{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.12}
+.insight-deck .deck-body{height:220px;min-height:0;display:grid;align-items:center;overflow:visible;animation:deck-fade .3s ease}
+.deck-pagination{height:40px;min-height:40px}
+@keyframes deck-fade{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+@media(prefers-reduced-motion:reduce){.insight-deck .deck-body{animation:none}}
+
+/* дуэль: подпись грамматически и визуально прикреплена к числу */
+.duel-feature-v64{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);grid-template-rows:auto auto;gap:9px 16px;align-items:center}
+.duel-person{height:58px;display:flex;align-items:center;gap:9px;padding:8px 11px;border:1px solid #d9cca1;border-radius:10px;background:#fff;box-shadow:inset 5px 0 var(--profile-accent);min-width:0}
+.duel-person:after{opacity:.1}
+.duel-person .profile-avatar{width:40px;height:40px;border:1px solid var(--profile-accent);border-radius:9px;display:grid;place-items:center;font-size:28px;flex:0 0 auto}
+.duel-person b{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.duel-scoreline-v64{grid-column:2;grid-row:1;display:grid;grid-template-columns:minmax(54px,auto) 18px minmax(54px,auto);align-items:center;text-align:center}
+.duel-scoreline-v64 div{display:flex;flex-direction:column;align-items:center;line-height:1}
+.duel-scoreline-v64 strong{font-size:34px;color:#846300;letter-spacing:-.05em}
+.duel-scoreline-v64 small{margin-top:4px;font-size:10px;font-weight:800;color:#6f6653;white-space:nowrap}
+.duel-scoreline-v64 em{font-style:normal;font-size:24px;font-weight:900;color:#b33d37}
+.duel-meta{grid-column:1/-1;margin:0;text-align:center;color:var(--muted);font-size:11px;font-weight:750}
+.duel-last{height:20px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* персональная карточка использует ту же палитру и узор */
+.premium-profile.profile-surface{--premium-accent:var(--profile-accent);background:#102e27}
+.premium-profile.profile-surface:after{opacity:.08;z-index:0}
+.premium-profile.profile-surface .premium-glow{background:var(--profile-accent);opacity:.25}
+.premium-profile.profile-surface .profile-sticky-bar{border-bottom-color:var(--profile-accent)}
+.premium-profile.profile-surface .profile-sticky-bar>span,.premium-profile.profile-surface .profile-close{color:var(--profile-accent)!important}
+.premium-profile .premium-avatar.profile-avatar{background:linear-gradient(145deg,var(--profile-soft),var(--profile-accent));border-color:#090f0c!important}
+.profile-showcase{display:table;margin:2px 0 4px;padding:3px 8px;border:1px solid var(--profile-accent);border-radius:99px;color:var(--profile-soft);background:color-mix(in srgb,var(--profile-accent) 18%,transparent);font-size:11px;font-weight:800}
+.profile-edit-identity{margin-left:auto;align-self:flex-start;border:1px solid var(--profile-accent);border-radius:8px;background:transparent;color:var(--profile-soft);padding:7px 10px;font-size:11px;font-weight:800}
+
+/* редактор идентичности */
+.modal:has(.profile-identity-form){width:min(690px,calc(100vw - 28px))}
+.profile-identity-form .identity-preview{min-height:82px;margin:0 0 16px;padding:12px 14px;display:flex;align-items:center;gap:12px;border:2px solid var(--profile-accent);border-radius:12px;background:linear-gradient(110deg,var(--profile-soft),#fff);box-shadow:4px 4px 0 var(--profile-accent)}
+.identity-preview:after{opacity:.15}
+.identity-preview>.profile-avatar{width:54px;height:58px;display:grid;place-items:center;border:2px solid var(--profile-accent);border-radius:10px;font-size:35px}
+.identity-preview>div{display:flex;flex-direction:column}.identity-preview b{font-size:20px}.identity-preview small{color:#6d5d3c}
+.emoji-groups{display:grid;gap:10px;margin-bottom:18px}.emoji-groups>section>small{display:block;margin:0 0 5px;color:var(--muted);font-size:10px;font-weight:850;text-transform:uppercase;letter-spacing:.08em}.emoji-groups .emoji-grid{margin:0;grid-template-columns:repeat(10,1fr)}
+.profile-colors{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-bottom:18px}.profile-colors button{min-height:44px;border:1px solid var(--line);border-radius:8px;background:#fff;display:flex;align-items:center;gap:7px;padding:6px;text-align:left}.profile-colors button i{width:24px;height:24px;border-radius:7px;background:var(--swatch);box-shadow:inset 0 0 0 2px rgba(0,0,0,.13)}.profile-colors button span{font-size:11px;font-weight:800}.profile-colors button.selected{border:2px solid var(--ink);box-shadow:2px 2px 0 var(--ink)}
+.profile-patterns{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-bottom:18px}.profile-patterns button{height:58px;border:1px solid var(--line);border-radius:8px;background:linear-gradient(120deg,var(--profile-soft),#fff);display:flex;flex-direction:column;justify-content:flex-end;align-items:flex-start;padding:7px;overflow:hidden}.profile-patterns button:after{opacity:.25}.profile-patterns button span{font-size:11px;font-weight:800}.profile-patterns button.selected{border:2px solid var(--ink);box-shadow:2px 2px 0 var(--ink)}
+.profile-awards{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:18px}.profile-awards button{min-height:48px;border:1px solid var(--line);border-radius:8px;background:#fff;padding:7px 9px;text-align:left;display:flex;flex-direction:column}.profile-awards button small{color:var(--muted);font-size:9px}.profile-awards button.selected{border:2px solid var(--ink);background:#fff1bd;box-shadow:2px 2px 0 var(--ink)}.identity-note{margin:-8px 0 18px;color:var(--muted);font-size:12px}
+
+/* табло получает ту же карту игрока */
+.tv-board article.profile-surface{box-shadow:inset clamp(5px,.42vw,8px) 0 var(--profile-accent)}
+.tv-board article.profile-surface:after{opacity:.1}
+.tv-avatar.profile-avatar{width:clamp(34px,2.7vw,54px);height:clamp(38px,3.1vw,62px);display:grid;place-items:center;border:2px solid var(--profile-accent);border-radius:clamp(7px,.55vw,11px);background:var(--profile-soft)}
+.tv-roster-player.profile-surface{background:linear-gradient(110deg,var(--profile-soft),#fff)!important;border-color:var(--profile-accent)!important;box-shadow:inset 5px 0 var(--profile-accent)}
+.tv-roster-player.profile-surface:after{opacity:.12}
+.tv-roster-player .profile-avatar{width:clamp(30px,2.2vw,44px);height:clamp(32px,2.4vw,48px);display:grid;place-items:center;border:1px solid var(--profile-accent);border-radius:8px;background:rgba(255,255,255,.65)}
+
+@media(max-width:760px){
+  .insight-deck{height:432px;grid-template-rows:70px minmax(0,1fr) 38px}
+  .insight-deck>header{height:70px;min-height:70px}
+  .insight-deck .deck-body{height:324px;align-items:center}
+  .deck-pagination{height:38px;min-height:38px}
+  .duel-feature-v64{grid-template-columns:minmax(0,1fr) 86px minmax(0,1fr);gap:8px}
+  .duel-person{height:108px;display:flex;flex-direction:column;justify-content:center;text-align:center;padding:7px}
+  .duel-person .profile-avatar{width:42px;height:42px;font-size:27px}
+  .duel-scoreline-v64{grid-template-columns:32px 12px 32px}
+  .duel-scoreline-v64 strong{font-size:29px}.duel-scoreline-v64 small{font-size:9px}.duel-scoreline-v64 em{font-size:18px}
+  .duel-last{height:auto;min-height:34px;white-space:normal;display:grid;place-items:center;margin-top:8px}
+  .emoji-groups .emoji-grid{grid-template-columns:repeat(6,1fr)}
+  .profile-colors,.profile-patterns{grid-template-columns:repeat(2,1fr)}
+  .profile-awards{grid-template-columns:1fr}
+  .profile-edit-identity{position:absolute;right:0;bottom:-30px;padding:5px 8px}
+  .profile-showcase{max-width:190px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .profile-compact{padding:2px 5px 2px 3px}.profile-compact .profile-avatar{width:25px;height:25px;font-size:17px}
+}
+.score-row.profile-surface{box-shadow:inset 4px 0 var(--profile-accent)}
+.score-row.profile-surface:after{opacity:.07}
+.forecast-star.profile-surface,.form-lead.profile-surface{padding:10px 12px;border:1px solid color-mix(in srgb,var(--profile-accent) 45%,#d9cca1);border-radius:9px;background:linear-gradient(110deg,var(--profile-soft),rgba(255,255,255,.9));box-shadow:inset 4px 0 var(--profile-accent)}
+.forecast-star.profile-surface:after,.form-lead.profile-surface:after{opacity:.08}
+.forecast-star .profile-avatar,.form-lead .profile-avatar{width:46px;height:50px;display:grid;place-items:center;border:1px solid var(--profile-accent);border-radius:9px;background:rgba(255,255,255,.6)}
+.forecast-podium>div.profile-surface,.form-ranking>div.profile-surface{box-shadow:inset 3px 0 var(--profile-accent)}
+.forecast-podium>div.profile-surface:after,.form-ranking>div.profile-surface:after{opacity:.07}
+.final-player-metrics article.profile-surface{box-shadow:inset 5px 0 var(--profile-accent)}
+.final-player-metrics article.profile-surface:after{opacity:.08}
+.final-player-metrics article .profile-avatar{width:42px;height:46px;display:grid;place-items:center;border:1px solid var(--profile-accent);border-radius:8px}
