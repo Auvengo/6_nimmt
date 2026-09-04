@@ -284,3 +284,31 @@
 .final-player-metrics article.profile-surface{box-shadow:inset 5px 0 var(--profile-accent)}
 .final-player-metrics article.profile-surface:after{opacity:.08}
 .final-player-metrics article .profile-avatar{width:42px;height:46px;display:grid;place-items:center;border:1px solid var(--profile-accent);border-radius:8px}
+
+/* v6.4.1 — крупнее и плотнее на десктопе, без изменения стабильной высоты */
+@media(min-width:761px){
+  .app-shell .insight-deck .deck-body{padding:14px 44px 10px;justify-items:stretch}
+  .app-shell .insight-deck .deck-body>*{width:100%!important;max-width:none!important;justify-self:stretch}
+  .app-shell .classic-forecast,.app-shell .form-feature{height:100%;align-content:center}
+  .app-shell .forecast-star,.app-shell .form-lead{min-height:76px;padding:13px 16px}
+  .app-shell .forecast-star .profile-avatar,.app-shell .form-lead .profile-avatar{width:58px;height:60px;font-size:38px}
+  .app-shell .forecast-star b{font-size:28px}.app-shell .forecast-star>strong{font-size:46px}
+  .app-shell .form-lead b{font-size:23px}.app-shell .form-lead>em{font-size:38px}
+  .app-shell .forecast-podium>div,.app-shell .form-ranking>div{min-height:58px;padding:11px 14px;font-size:16px}
+  .app-shell .form-ranking p{height:23px}.app-shell .form-ranking i{max-height:23px;height:calc(5px + (var(--v) * .18px));width:7px}
+  .app-shell .duel-feature-v64{height:154px;grid-template-columns:minmax(0,1fr) 180px minmax(0,1fr);gap:12px 22px}
+  .app-shell .duel-person{height:88px;padding:12px 16px;font-size:19px}
+  .app-shell .duel-person .profile-avatar{width:58px;height:60px;font-size:38px}
+  .app-shell .duel-scoreline-v64{grid-template-columns:68px 24px 68px}
+  .app-shell .duel-scoreline-v64 strong{font-size:46px}.app-shell .duel-scoreline-v64 small{font-size:12px}.app-shell .duel-scoreline-v64 em{font-size:30px}
+  .app-shell .duel-meta{font-size:13px}.app-shell .duel-last{font-size:13px}
+  .app-shell .daily-story{min-height:138px;padding:24px 28px;gap:24px}
+  .app-shell .daily-story>span{font-size:58px}.app-shell .daily-story b{font-size:27px}.app-shell .daily-story p{font-size:15px}.app-shell .daily-story>strong{font-size:40px}
+  .app-shell .history-timeline{margin-top:18px;font-size:12px}
+  .app-shell .deck-footnote{font-size:12px;margin-top:12px}
+}
+.profile-surface[data-profile-pattern="none"]:after{background:none!important}
+.profile-patterns button[data-profile-pattern="none"]{background:linear-gradient(120deg,var(--profile-soft),#fff)}
+.profile-patterns button[data-profile-pattern="none"]:before{content:"";position:absolute;inset:7px;border:1px dashed color-mix(in srgb,var(--profile-accent) 45%,transparent);border-radius:5px;z-index:0}
+
+@media(min-width:761px){.app-shell .insight-deck .deck-body{grid-template-columns:minmax(0,1fr)}.app-shell .insight-deck .deck-body>.classic-forecast,.app-shell .insight-deck .deck-body>.form-feature,.app-shell .insight-deck .deck-body>.duel-feature-v64{min-width:0;width:auto!important}}
