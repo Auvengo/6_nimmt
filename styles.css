@@ -322,3 +322,26 @@
 .stats-mobile .profile-surface:after{display:none!important}
 .mobile-podium button>.profile-avatar{width:42px;height:46px;display:grid;place-items:center;border:1px solid var(--profile-accent)!important;border-radius:9px;background:var(--profile-soft);font-size:27px}
 .mobile-ranking i.profile-avatar{width:30px;height:34px;display:grid;place-items:center;border:1px solid var(--profile-accent)!important;border-radius:7px;background:var(--profile-soft);font-size:21px}
+
+
+/* v6.4.3 — читаемая динамика мест и отдельные карточки для публикации */
+.final-rank-timeline{display:grid;gap:8px}
+.rank-journey{display:grid;grid-template-columns:190px minmax(0,1fr);align-items:center;gap:14px;min-height:70px;padding:9px 12px;border:1px solid #d8cba8;border-radius:10px;background:linear-gradient(100deg,var(--profile-soft),#fff 34%);box-shadow:inset 5px 0 var(--profile-accent)}
+.rank-journey:after{opacity:.07}
+.rank-journey.winner{border:2px solid var(--profile-accent)}
+.journey-player{display:grid;grid-template-columns:46px minmax(0,1fr);grid-template-rows:auto auto;align-items:center;gap:0 9px;min-width:0}
+.journey-player .profile-avatar{grid-row:1/3;width:42px;height:48px;border:1px solid var(--profile-accent)!important;border-radius:8px;display:grid;place-items:center;background:rgba(255,255,255,.64);font-size:27px}
+.journey-player b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:15px}.journey-player small{color:var(--muted);font-size:10px}
+.journey-steps{display:flex;align-items:center;gap:4px;flex-wrap:wrap}
+.journey-steps>span{width:39px;height:45px;border:1px solid #d4c79f;border-radius:8px;background:#fff;display:grid;place-items:center;align-content:center;line-height:1}
+.journey-steps>span small{font-size:8px;color:var(--muted);margin-bottom:3px}.journey-steps>span b{font-size:20px}
+.journey-steps>span.first{background:#fff0a8;border-color:#a67b00}.journey-steps>span.last{box-shadow:inset 0 0 0 2px var(--profile-accent)}
+.journey-steps>i{font-style:normal;color:#a69b7d;font-size:12px}
+.winner-actions [data-action="share-winner-pane"]{min-width:210px}
+@media(max-width:760px){
+  .rank-journey{grid-template-columns:1fr;gap:8px;padding:9px;min-height:0}
+  .journey-player{grid-template-columns:40px minmax(0,1fr)}.journey-player .profile-avatar{width:36px;height:40px;font-size:23px}
+  .journey-steps{gap:3px}.journey-steps>span{width:34px;height:39px}.journey-steps>span b{font-size:17px}.journey-steps>i{font-size:10px}
+  .winner-actions [data-action="share-winner-pane"]{min-width:0}
+}
+.winner-pane{overflow-x:hidden}
