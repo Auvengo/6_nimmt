@@ -312,3 +312,13 @@
 .profile-patterns button[data-profile-pattern="none"]:before{content:"";position:absolute;inset:7px;border:1px dashed color-mix(in srgb,var(--profile-accent) 45%,transparent);border-radius:5px;z-index:0}
 
 @media(min-width:761px){.app-shell .insight-deck .deck-body{grid-template-columns:minmax(0,1fr)}.app-shell .insight-deck .deck-body>.classic-forecast,.app-shell .insight-deck .deck-body>.form-feature,.app-shell .insight-deck .deck-body>.duel-feature-v64{min-width:0;width:auto!important}}
+
+/* v6.4.2 — в статистике цвет остаётся только у значка игрока */
+.stats-table .stat-player.profile-surface{box-shadow:none!important;padding:4px 0!important;border-radius:0;background:transparent}
+.stats-table .stat-player.profile-surface:after{display:none!important}
+.stats-table .stat-player .stat-rank{width:22px;text-align:center;color:var(--muted)}
+.stats-table .stat-player .avatar.profile-avatar{width:34px;height:38px;display:grid;place-items:center;border:1px solid var(--profile-accent)!important;border-radius:7px;background:var(--profile-soft);font-size:23px}
+.stats-mobile .profile-surface{box-shadow:none!important}
+.stats-mobile .profile-surface:after{display:none!important}
+.mobile-podium button>.profile-avatar{width:42px;height:46px;display:grid;place-items:center;border:1px solid var(--profile-accent)!important;border-radius:9px;background:var(--profile-soft);font-size:27px}
+.mobile-ranking i.profile-avatar{width:30px;height:34px;display:grid;place-items:center;border:1px solid var(--profile-accent)!important;border-radius:7px;background:var(--profile-soft);font-size:21px}
