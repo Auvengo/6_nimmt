@@ -24,6 +24,9 @@ let selectedProfileId = null, selectedOpponentId = null, manualImport = null;
 let gamificationTab = "temporary";
 let awardsOpen = false;
 let olderArchiveOpen = false, archivePage = 0, selectedArchiveId = null;
+let archiveFeed={items:[],nextCursor:null,hasMore:false,loading:false,loaded:false};
+const archiveDetails=new Map();
+let historyLoaded=!cloudMode,historyLoading=null,statsMemo={key:null,value:null};
 const draftSaveTimers = new Map();
 let insightIndex = 0, insightTouch = null;
 let tvCelebrationGame = null, tvCelebrationUntil = 0, tvCelebrationTimer = null;
@@ -90,6 +93,10 @@ function createCloudApi() {
     mergeProfiles: (source,target) => rpc("korova_admin_merge_profiles",{p_code:roomCode,p_token:adminToken(),p_source:source,p_target:target}),
     ensure: () => rpc("korova_ensure_room", { p_code: roomCode }),
     getState: async () => { const s=await rpc("korova_get_state",{p_code:roomCode});s.currentGame.draftScores=await rpc("korova_get_draft_scores",{p_code:roomCode});return s; },
+    getLiveState: () => rpc("korova_live_state",{p_code:roomCode}),
+    getHistory: async()=>{try{return await rpc("korova_history_data",{p_code:roomCode})}catch{return (await rpc("korova_get_state",{p_code:roomCode})).archive||[]}},
+    archivePage: async(cursor=null,limit=12)=>{try{return await rpc("korova_archive_page_v2",{p_code:roomCode,p_cursor:cursor,p_limit:limit})}catch(e){if(/archive_page_v2|schema cache|404/i.test(e.message))return rpc("korova_archive_page",{p_code:roomCode,p_before:cursor?.finishedAt||cursor,p_limit:limit});throw e}},
+    gameDetail: gameId=>rpc("korova_game_detail",{p_code:roomCode,p_game_id:gameId}),
     addPlayer: (name,emoji)=>rpc("korova_add_player",{p_code:roomCode,p_name:name,p_emoji:emoji}),
     removePlayer: playerId=>rpc("korova_remove_player",{p_code:roomCode,p_player_id:playerId}),
     addExistingPlayer: profileId=>rpc("korova_add_existing_player",{p_code:roomCode,p_profile_id:profileId}),
@@ -97,7 +104,7 @@ function createCloudApi() {
     addRound: (scores) => rpc("korova_add_round", { p_code: roomCode, p_scores: scores }),
     setDraftScore: (playerId, score) => rpc("korova_set_draft_score", { p_code: roomCode, p_player_id: playerId, p_score: score }),
     clearDraftScore: (playerId) => rpc("korova_clear_draft_score", { p_code: roomCode, p_player_id: playerId }),
-    finalizeRound: ()=>rpc("korova_finalize_round",{p_code:roomCode}),
+    finalizeRound: async token=>{try{return await rpc("korova_finalize_round_v2",{p_code:roomCode,p_client_token:token})}catch(e){if(/finalize_round_v2|schema cache|404/i.test(e.message))return rpc("korova_finalize_round",{p_code:roomCode});throw e}},
     importGame: (playedAt,profiles,rounds)=>rpc("korova_import_game",{p_code:roomCode,p_played_at:playedAt,p_profiles:profiles,p_rounds:rounds}),
     updateRound: (roundId,scores)=>rpc("korova_update_round",{p_code:roomCode,p_round_id:roundId,p_scores:scores}),
     undoRound: ()=>rpc("korova_undo_last_round",{p_code:roomCode}),
@@ -139,6 +146,10 @@ function createLocalApi() {
     updateProfile: async (profileId,name,emoji)=>{const s=load(),pr=s.knownPlayers.find(x=>x.id===profileId);if(pr){pr.name=name;pr.emoji=emoji}for(const x of [s.currentGame,...s.archive].flatMap(g=>g.players||[]))if(x.profileId===profileId){x.name=name;x.emoji=emoji}return save(s)},
     ensure: async () => { if (!localStorage.getItem(key)) save(fresh()); },
     getState: async () => structuredClone(load()),
+    getLiveState: async()=>{const s=structuredClone(load());s.archiveCount=s.archive.length;return s},
+    getHistory: async()=>structuredClone(load().archive),
+    archivePage: async(before=null,limit=12)=>{const games=load().archive.filter(g=>!before||new Date(g.finishedAt)<new Date(before)).slice(0,limit);return{items:games.map(g=>{const r=rankingFor(g),w=r[0];return{id:g.id,startedAt:g.startedAt,finishedAt:g.finishedAt,playerCount:g.players.length,roundCount:g.rounds.length,winner:w?{profileId:w.profileId,name:w.name,emoji:w.emoji,total:w.total}:null}}),nextCursor:games.at(-1)?.finishedAt||null,hasMore:games.length===limit}},
+    gameDetail: async gameId=>structuredClone(load().archive.find(g=>g.id===gameId)),
     addPlayer: async (name, emoji) => {
       const s = load();
       if (s.currentGame.players.length >= LIMIT) throw new Error("В игре уже 10 игроков");
@@ -175,7 +186,7 @@ function createLocalApi() {
     setDraftScore: async (playerId, score) => { const s=load();s.currentGame.draftScores[playerId]=score;save(s);return structuredClone(s.currentGame.draftScores); },
     clearDraftScore: async (playerId) => { const s=load();delete s.currentGame.draftScores[playerId];save(s);return structuredClone(s.currentGame.draftScores); },
     importGame: async (playedAt, profiles, rounds) => { const s=load(),game={id:uid(),startedAt:playedAt,finishedAt:playedAt,players:profiles.map((id,i)=>{const p=s.knownPlayers.find(x=>x.id===id);return{id:uid(),profileId:id,name:p.name,emoji:p.emoji,seat:i+1}}),rounds:[]};game.rounds=rounds.map((r,i)=>({id:uid(),number:i+1,createdAt:playedAt,scores:Object.fromEntries(game.players.map(x=>[x.id,r[x.profileId]]))}));s.archive.push(game);s.archive.sort((x,y)=>new Date(y.finishedAt)-new Date(x.finishedAt));return save(s); },
-    finalizeRound: async () => { const s=load(),scores=s.currentGame.draftScores||{};if(s.currentGame.players.some(x=>!Object.prototype.hasOwnProperty.call(scores,x.id)))throw new Error("Сначала каждый игрок должен внести свои очки");s.currentGame.rounds.push({id:uid(),number:s.currentGame.rounds.length+1,createdAt:new Date().toISOString(),scores:{...scores}});s.currentGame.draftScores={};return save(s); },
+    finalizeRound: async token => { const s=load(),scores=s.currentGame.draftScores||{};if(s.currentGame.players.some(x=>!Object.prototype.hasOwnProperty.call(scores,x.id)))throw new Error("Сначала каждый игрок должен внести свои очки");s.currentGame.rounds.push({id:uid(),number:s.currentGame.rounds.length+1,createdAt:new Date().toISOString(),scores:{...scores}});s.currentGame.draftScores={};return save(s); },
     addRound: async (scores) => {
       const s = load();
       if (s.currentGame.players.length < 2) throw new Error("Добавьте минимум двух игроков");
@@ -203,6 +214,17 @@ function createLocalApi() {
   };
 }
 
+function rankingFor(game){return[...(game?.players||[])].map(p=>({...p,total:(game.rounds||[]).reduce((s,r)=>s+Number(r.scores?.[p.id]||0),0)})).sort((x,y)=>x.total-y.total||x.seat-y.seat)}
+function archiveTotal(){return Number(state?.archiveCount??state?.archive?.length??0)}
+function mergeLive(next){const hasArchive=Array.isArray(next?.archive);if(hasArchive){historyLoaded=true;statsMemo={key:null,value:null}}const archive=hasArchive?next.archive:(historyLoaded?(state?.archive||[]):(state?.archive||[]));return{...next,archive,archiveCount:Number(next.archiveCount??(hasArchive?next.archive.length:null)??state?.archiveCount??archive.length)}}
+async function getLive(){if(!cloudMode)return api.getLiveState();try{return await api.getLiveState()}catch{return api.getState()}}
+async function ensureHistory(force=false){if(!cloudMode){historyLoaded=true;return state.archive}if(historyLoaded&&!force)return state.archive;if(historyLoading)return historyLoading;historyLoading=api.getHistory().then(rows=>{state.archive=Array.isArray(rows)?rows:[];state.archiveCount=state.archive.length;historyLoaded=true;statsMemo={key:null,value:null};lastStateHash=JSON.stringify({...state,archive:[]});render();return state.archive}).catch(e=>{showToast("Не удалось загрузить историю","error");throw e}).finally(()=>historyLoading=null);return historyLoading}
+function invalidateHistory(){historyLoaded=!cloudMode;statsMemo={key:null,value:null};archiveFeed={items:[],nextCursor:null,hasMore:false,loading:false,loaded:false};archiveDetails.clear()}
+async function loadArchivePage(reset=false){if(!cloudMode)return;if(archiveFeed.loading||(!reset&&archiveFeed.loaded&&!archiveFeed.hasMore))return;if(reset)archiveFeed={items:[],nextCursor:null,hasMore:false,loading:true,loaded:false};else archiveFeed.loading=true;render();try{const page=await api.archivePage(reset?null:archiveFeed.nextCursor,12),seen=new Set(archiveFeed.items.map(x=>x.id));archiveFeed.items=[...archiveFeed.items,...(page.items||[]).filter(x=>!seen.has(x.id))];archiveFeed.nextCursor=page.nextCursor||null;archiveFeed.hasMore=!!page.hasMore;archiveFeed.loaded=true}catch(e){showToast("Не удалось загрузить архив","error")}finally{archiveFeed.loading=false;render()}}
+async function openArchiveGame(id){selectedArchiveId=id;olderArchiveOpen=true;const existing=archiveDetails.get(id)||(!cloudMode?(state.archive||[]).find(g=>g.id===id&&g.players&&g.rounds):null);if(existing){archiveDetails.set(id,existing);modal="archive-game";render();return}modal="archive-loading";render();try{const game=await api.gameDetail(id);if(!game)throw new Error("Партия не найдена");archiveDetails.set(id,game);modal="archive-game";render()}catch(e){modal=null;render();showToast(e.message||"Не удалось открыть партию","error")}}
+function downloadText(name,text,type){const blob=new Blob([text],{type}),url=URL.createObjectURL(blob),link=document.createElement("a");link.href=url;link.download=name;link.click();setTimeout(()=>URL.revokeObjectURL(url),1000)}
+async function exportBackup(format){await ensureHistory();const stamp=new Date().toISOString().slice(0,10);if(format==="json"){downloadText(`korova-${roomCode}-${stamp}.json`,JSON.stringify({version:"6.3",exportedAt:new Date().toISOString(),room:state.room,knownPlayers:state.knownPlayers,currentGame:state.currentGame,archive:state.archive},null,2),"application/json");return}const rows=[["Дата","Игрок","Место","Очки","Раунды","Игроков"]];for(const g of state.archive)rankingFor(g).forEach((x,i)=>rows.push([(g.finishedAt||g.startedAt||"").slice(0,10),x.name,i+1,x.total,g.rounds.length,g.players.length]));const csv="\ufeff"+rows.map(r=>r.map(v=>`"${String(v).replaceAll('"','""')}"`).join(";")).join("\n");downloadText(`korova-${roomCode}-${stamp}.csv`,csv,"text/csv;charset=utf-8")}
+
 function esc(value = "") {
   return String(value).replace(/[&<>'"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" }[c]));
 }
@@ -213,12 +235,13 @@ function ranking(game = state.currentGame) {
   return [...game.players].map(p => ({ ...p, total: totalFor(p.id, game) })).sort((a, b) => a.total - b.total || a.seat - b.seat);
 }
 function statistics() {
+  const cacheKey=`${statsPeriod}:${state.archive.length}:${state.archive[0]?.id||''}:${state.archive.at(-1)?.id||''}`;if(statsMemo.key===cacheKey)return statsMemo.value;
   const now=Date.now(),days=statsPeriod==="week"?7:statsPeriod==="month"?30:null;
   const games=[...state.archive].filter(g=>!days||now-new Date(g.finishedAt||g.startedAt).getTime()<=days*86400000).reverse();
   const map=new Map();
   for(const game of games){const ranks=ranking(game),best=ranks[0]?.total,winners=new Set(ranks.filter(x=>x.total===best).map(x=>x.profileId||x.name.toLowerCase()));for(const player of ranks){const key=player.profileId||player.name.toLowerCase();const won=winners.has(key);const x=map.get(key)||{profileId:player.profileId||key,name:player.name,emoji:player.emoji,games:0,wins:0,points:0,best:Infinity,streak:0,bestStreak:0,trend:[]};x.name=player.name;x.emoji=player.emoji;x.games++;x.points+=player.total;x.best=Math.min(x.best,player.total);x.trend.push(player.total);if(won){x.wins++;x.streak++;x.bestStreak=Math.max(x.bestStreak,x.streak)}else x.streak=0;map.set(key,x)}}
   const items=[...map.values()].map(x=>({...x,average:Math.round(x.points/x.games*10)/10,winRate:Math.round(x.wins/x.games*100)})).sort((a,b)=>b.wins-a.wins||a.average-b.average);
-  return {items,games};
+  const value={items,games};statsMemo={key:cacheKey,value};return value;
 }
 function formatDate(iso) {
   return new Intl.DateTimeFormat("ru-RU", { day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" }).format(new Date(iso));
@@ -245,8 +268,8 @@ async function mutate(action, success) {
   render();
   try {
     const result = await action();
-    state = result?.currentGame ? result : await api.getState();
-    lastStateHash = JSON.stringify(state);
+    state=mergeLive(result?.currentGame?result:await getLive());
+    lastStateHash=JSON.stringify({...state,archive:[]});
     modal = null;
     busy = false;
     render();
@@ -288,7 +311,7 @@ function tvUrl(){const u=new URL(location.href);u.searchParams.set("room",roomCo
 function todayGames(){const d=new Date().toLocaleDateString("sv-SE",{timeZone:"Europe/Minsk"});return(state.archive||[]).filter(g=>new Date(g.finishedAt||g.startedAt).toLocaleDateString("sv-SE",{timeZone:"Europe/Minsk"})===d)}
 function tvDayLeaders(games){const m=new Map();for(const g of games){const r=ranking(g),best=r[0]?.total;for(const x of r.filter(y=>y.total===best)){const key=x.profileId||x.name,v=m.get(key)||{name:x.name,emoji:x.emoji,wins:0};v.wins++;m.set(key,v)}}return[...m.values()].sort((a,b)=>b.wins-a.wins)}
 function renderTvCelebration(game){const r=ranking(game),best=r[0]?.total,winners=r.filter(x=>x.total===best),runner=r.find(x=>x.total>best),margin=runner?runner.total-best:0;root.innerHTML=`<main class="tv-shell tv-finale-shell"><header><div class="tv-brand"><span>🐮</span><div><b>Коровосчёт 006</b><small>Партия завершена</small></div></div><div class="tv-tools"><span class="tv-live">● Итоги</span><button data-action="tv-fullscreen">Во весь экран</button><a href="?room=${roomCode}">Выйти</a></div></header><section class="tv-finale"><div class="tv-confetti">${Array.from({length:36},(_,i)=>`<i style="--i:${i}"></i>`).join("")}</div><small>ПОБЕДИТЕЛЬ${winners.length>1?"И":""}</small><div class="tv-winner-avatars">${winners.map(x=>esc(x.emoji)).join(" ")}</div><h1>${winners.map(x=>esc(x.name)).join(" и ")}</h1><strong>${best} ${plural(best,"очко","очка","очков")}</strong><p>${runner?`Отрыв от второго места — ${margin} ${plural(margin,"очко","очка","очков")}`:"Победа зафиксирована"}</p><div class="tv-final-top">${r.slice(0,3).map((x,i)=>`<span><em>${["🥇","🥈","🥉"][i]}</em><b>${esc(x.emoji)} ${esc(x.name)}</b><strong>${x.total}</strong></span>`).join("")}</div><footer>Через несколько секунд табло вернётся к следующей игре</footer></section></main>`}
-function renderTv(){if(tvCelebrationGame&&Date.now()<tvCelebrationUntil){renderTvCelebration(tvCelebrationGame);return}const g=state.currentGame,r=ranking(g),last=g.rounds.at(-1),today=todayGames(),leader=r[0];document.body.classList.add("tv-mode");root.innerHTML=`<main class="tv-shell"><header><div class="tv-brand"><span>🐮</span><div><b>Коровосчёт 006</b><small>Большое табло · комната ${roomCode}</small></div></div><div class="tv-tools"><span class="tv-live ${navigator.onLine?"":"offline"}">● ${navigator.onLine?"В эфире":"Нет связи"}</span><button data-action="copy-tv-link">Ссылка</button><button data-action="tv-fullscreen">Во весь экран</button><a href="?room=${roomCode}">Выйти</a></div></header>${!g.players.length?`<section class="tv-empty"><div>🎴</div><h1>Ждём игроков</h1><p>Добавьте участников с телефона или ноутбука.</p></section>`:g.rounds.length?`<section class="tv-stage"><div class="tv-heading"><div><small>Текущая партия</small><h1>Раунд ${g.rounds.length+1}</h1></div><div><b>${leader?`${esc(leader.emoji)} ${esc(leader.name)}`:"—"}</b><small>сейчас впереди</small></div></div>${renderTvEvent(g)}<div class="tv-board">${r.map((x,i)=>`<article class="${i===0?"leader":""} ${x.total>=66?"over66":""}"><span class="tv-place">${i+1}</span><span class="tv-avatar">${esc(x.emoji)}</span><b>${esc(x.name)}</b><em>${last?`+${last.scores[x.id]??0}`:""}</em><strong>${x.total}</strong><small>${x.total>=66?"66+ · игра продолжается":"очков"}</small></article>`).join("")}</div><footer><span>В архиве: <b>${state.archive.length}</b></span><span>Последнее обновление: <b>${new Date().toLocaleTimeString("ru-RU",{hour:"2-digit",minute:"2-digit"})}</b></span></footer></section>`:`<section class="tv-wait"><div><small>Состав готов · ${g.players.length} ${plural(g.players.length,"игрок","игрока","игроков")}</small><h1>Начинаем игру</h1><p>Прогноз перед первым раундом</p></div>${dailyCard(g)}<div class="tv-roster">${g.players.map(x=>`<span>${esc(x.emoji)} <b>${esc(x.name)}</b></span>`).join("")}</div></section>`}</main>`}
+function renderTv(){if(tvCelebrationGame&&Date.now()<tvCelebrationUntil){renderTvCelebration(tvCelebrationGame);return}const g=state.currentGame,r=ranking(g),last=g.rounds.at(-1),today=todayGames(),leader=r[0];document.body.classList.add("tv-mode");root.innerHTML=`<main class="tv-shell"><header><div class="tv-brand"><span>🐮</span><div><b>Коровосчёт 006</b><small>Большое табло · комната ${roomCode}</small></div></div><div class="tv-tools"><span class="tv-live ${navigator.onLine?"":"offline"}">● ${navigator.onLine?"В эфире":"Нет связи"}</span><button data-action="copy-tv-link">Ссылка</button><button data-action="tv-fullscreen">Во весь экран</button><a href="?room=${roomCode}">Выйти</a></div></header>${!g.players.length?`<section class="tv-empty"><div>🎴</div><h1>Ждём игроков</h1><p>Добавьте участников с телефона или ноутбука.</p></section>`:g.rounds.length?`<section class="tv-stage"><div class="tv-heading"><div><small>Текущая партия</small><h1>Раунд ${g.rounds.length+1}</h1></div><div><b>${leader?`${esc(leader.emoji)} ${esc(leader.name)}`:"—"}</b><small>сейчас впереди</small></div></div>${renderTvEvent(g)}<div class="tv-board">${r.map((x,i)=>`<article class="${i===0?"leader":""} ${x.total>=66?"over66":""}"><span class="tv-place">${i+1}</span><span class="tv-avatar">${esc(x.emoji)}</span><b>${esc(x.name)}</b><em>${last?`+${last.scores[x.id]??0}`:""}</em><strong>${x.total}</strong><small>${x.total>=66?"66+ · игра продолжается":"очков"}</small></article>`).join("")}</div><footer><span>В архиве: <b>${archiveTotal()}</b></span><span>Последнее обновление: <b>${new Date().toLocaleTimeString("ru-RU",{hour:"2-digit",minute:"2-digit"})}</b></span></footer></section>`:`<section class="tv-wait"><div><small>Состав готов · ${g.players.length} ${plural(g.players.length,"игрок","игрока","игроков")}</small><h1>Начинаем игру</h1><p>Прогноз перед первым раундом</p></div>${dailyCard(g)}<div class="tv-roster">${g.players.map(x=>`<span>${esc(x.emoji)} <b>${esc(x.name)}</b></span>`).join("")}</div></section>`}</main>`}
 function render() {
   if (!state) {
     root.innerHTML = `<main class="loading"><div class="logo-card mini">🐮<b>006</b></div><p>Раскладываем карты…</p></main>`;
@@ -317,7 +340,7 @@ function render() {
 
       <nav class="tabs" aria-label="Разделы">
         <button class="tab ${tab === "game" ? "active" : ""}" data-tab="game">${icon("cards")} Текущая игра</button>
-        <button class="tab ${tab === "archive" ? "active" : ""}" data-tab="archive">${icon("archive")} Архив <span>${state.archive.length}</span></button>
+        <button class="tab ${tab === "archive" ? "active" : ""}" data-tab="archive">${icon("archive")} Архив <span>${archiveTotal()}</span></button>
         <button class="tab ${tab === "stats" ? "active" : ""}" data-tab="stats">${icon("chart")} Статистика</button>
       </nav>
 
@@ -416,7 +439,9 @@ function renderRounds(game) {
  const players=[...game.players].sort((a,b)=>a.seat-b.seat);
  return `<section class="rounds-section"><div class="section-heading"><div><span class="section-no">03</span><h2>Ход партии</h2></div><span class="hint">Нажмите раунд, чтобы раскрыть</span></div><div class="round-accordion always">${[...game.rounds].reverse().map((r,i)=>`<details ${i===0?"open":""}><summary><span>Раунд ${r.number}</span><b>${new Date(r.createdAt).toLocaleTimeString("ru-RU",{hour:"2-digit",minute:"2-digit"})}</b></summary><div>${players.map(p=>`<p><span>${esc(p.emoji)} ${esc(p.name)}</span><strong>+${r.scores[p.id]??0}</strong></p>`).join("")}${(()=>{const e=gameEvents(game).find(x=>x.roundId===r.id);return e?`<div class="round-event ${e.tone}"><span>${e.icon}</span><div><small>${e.title}</small><p>${esc(e.text)}</p></div></div>`:""})()}<button class="button secondary full" data-action="open-edit-round" data-id="${r.id}">${icon("edit")} Исправить раунд</button></div></details>`).join("")}<button class="undo-change" data-action="undo-change">${icon("undo")} Отменить последнее исправление</button></div></section>`;
 }
+function renderPagedArchive(){const total=archiveTotal();if(!total)return `<section class="archive-empty"><div class="empty-trophy">${icon("trophy")}</div><h1>Архив ещё пуст</h1><p>Завершённые партии появятся здесь вместе с датой, составом и финальным счётом.</p><button class="button primary" data-action="open-import">＋ Добавить прошлую партию</button></section>`;if(!archiveFeed.loaded)return `<section class="archive-page"><div class="archive-title archive-title-actions"><div><span class="eyebrow">История стола</span><h1>Прошлые игры</h1><p>Загружаем последние партии…</p></div><button class="button secondary" data-action="open-import">＋ Добавить прошлую партию</button></div><div class="archive-loading-cards"><i></i><i></i><i></i></div></section>`;const rows=archiveFeed.items.map((g,i)=>`<button class="archive-server-row" data-action="open-archive-game" data-id="${g.id}"><span class="compact-date">${formatDate(g.finishedAt||g.startedAt)}</span><span class="compact-winner">${esc(g.winner?.emoji||'🏆')} <b>${esc(g.winner?.name||'—')}</b></span><small>${g.playerCount} ${plural(g.playerCount,'игрок','игрока','игроков')} · ${g.roundCount} ${plural(g.roundCount,'раунд','раунда','раундов')}</small><strong>${g.winner?.total??'—'} очк.</strong><i>›</i></button>`).join('');return `<section class="archive-page"><div class="archive-title archive-title-actions"><div><span class="eyebrow">История стола</span><h1>Прошлые игры</h1><p>Партии загружаются порциями — подробности открываются по нажатию.</p></div><button class="button secondary" data-action="open-import">＋ Добавить прошлую партию</button></div><div class="recent-archive"><div class="archive-section-title"><b>Архив</b><span>${archiveFeed.items.length} из ${total}</span></div><div class="archive-server-list">${rows}</div>${archiveFeed.hasMore?`<button class="button secondary archive-load-more" data-action="archive-load-more" ${archiveFeed.loading?'disabled':''}>${archiveFeed.loading?'Загружаем…':'Показать ещё'}</button>`:''}</div></section>`}
 function renderArchive(){
+  if(cloudMode)return renderPagedArchive();
   if(!state.archive.length)return `<section class="archive-empty"><div class="empty-trophy">${icon("trophy")}</div><h1>Архив ещё пуст</h1><p>Завершённые партии появятся здесь вместе с датой, составом и финальным счётом.</p><button class="button primary" data-action="open-import">＋ Добавить прошлую партию</button></section>`;
   const recent=state.archive.slice(0,3),older=state.archive.slice(3),pageSize=10,pageCount=Math.max(1,Math.ceil(older.length/pageSize));archivePage=Math.max(0,Math.min(archivePage,pageCount-1));const visible=older.slice(archivePage*pageSize,(archivePage+1)*pageSize);
   const monthName=d=>new Date(d).toLocaleDateString("ru-RU",{month:"long",year:"numeric"});let lastMonth="";const compact=visible.map(game=>{const month=monthName(game.finishedAt||game.startedAt),ranks=ranking(game),best=ranks[0]?.total,winners=ranks.filter(x=>x.total===best),heading=month!==lastMonth?(lastMonth=month,`<div class="archive-month">${month}</div>`):"";return `${heading}<button class="archive-compact-row" data-action="open-archive-game" data-id="${game.id}"><span class="compact-date">${formatDate(game.finishedAt||game.startedAt)}</span><span class="compact-winner">${esc(winners[0]?.emoji||"🏆")} <b>${winners.map(x=>esc(x.name)).join(", ")}</b></span><small>${game.players.length} ${plural(game.players.length,"игрок","игрока","игроков")} · ${game.rounds.length} ${plural(game.rounds.length,"раунд","раунда","раундов")}</small><strong>${best} очк.</strong><i>›</i></button>`}).join("");
@@ -450,6 +475,7 @@ function buildRecordBook(){
  ].filter(Boolean)}
 function renderRecordBook(){const records=buildRecordBook();if(!records.length)return"";return `<section class="record-book"><header><div><span class="eyebrow">История комнаты</span><h2>Книга рекордов</h2></div><small>${state.archive.length} ${plural(state.archive.length,"партия","партии","партий")} в архиве</small></header><div class="record-grid">${records.map(r=>`<button ${r.game?`data-action="open-archive-game" data-id="${r.game.id}"`:""}><i>${r.icon}</i><span><small>${r.name}</small><b>${esc(r.who)}</b><em>${r.desc}</em></span><strong>${r.value}</strong></button>`).join("")}</div></section>`}
 function renderStatistics() {
+  if(cloudMode&&!historyLoaded)return `<section class="archive-empty"><div class="empty-trophy">${icon("chart")}</div><h1>Загружаем статистику</h1><p>История подгружается только при необходимости.</p><div class="modal-loader"></div></section>`;
   const data=statistics(),items=data.items;
   if(!items.length)return `<section class="archive-empty"><div class="empty-trophy">${icon("chart")}</div><h1>Нет партий за период</h1><p>Выберите другой период или завершите игру.</p><div class="period-tabs">${renderPeriods()}</div></section>`;
   const renderTrend=p=>{const vals=p.trend.slice(-8),max=Math.max(...vals,1);return `<span class="mini-trend" aria-label="Последние результаты: ${vals.join(", ")}">${vals.map(v=>`<i style="height:${Math.max(8,Math.round(v/max*34))}px" title="${v} очк."></i>`).join("")}</span>`};
@@ -498,8 +524,9 @@ function renderModal() {
   if (!modal) return "";
   const shell = body => `<div class="modal-backdrop" data-action="close-modal"><section class="modal" role="dialog" aria-modal="true" data-modal><button class="modal-close" data-action="close-modal" aria-label="Закрыть">×</button>${body}</section></div>`;
 
-  if(modal==="admin"){return shell(`<span class="eyebrow">Режим организатора</span><h2>${isAdmin()?"Доступ открыт":"Введите PIN"}</h2>${isAdmin()?`<p class="modal-text">Административные действия доступны до ${formatDate(adminSession.expiresAt)}.</p><button class="button secondary full" data-action="admin-logout">Выйти из режима организатора</button><details class="admin-merge"><summary>Объединить дубли профилей</summary><form id="merge-profiles-form"><select name="source">${(state.knownPlayers||[]).map(p=>`<option value="${p.id}">${esc(p.emoji)} ${esc(p.name)}</option>`).join("")}</select><span>→</span><select name="target">${(state.knownPlayers||[]).map(p=>`<option value="${p.id}">${esc(p.emoji)} ${esc(p.name)}</option>`).join("")}</select><button class="button primary full" type="submit">Объединить</button></form></details>`:`<form id="admin-login-form"><label class="field-label">Шестизначный PIN</label><input class="text-input admin-pin" name="pin" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" required autofocus><button class="button primary full" type="submit">Войти</button></form>`}`)}
-  if(modal==="archive-game"){const game=state.archive.find(g=>g.id===selectedArchiveId);if(!game)return"";const ranks=ranking(game),best=ranks[0]?.total;return shell(`<span class="eyebrow">Архивная партия</span><h2>${formatDate(game.finishedAt||game.startedAt)}</h2><p class="modal-text">${game.players.length} ${plural(game.players.length,"игрок","игрока","игроков")} · ${game.rounds.length} ${plural(game.rounds.length,"раунд","раунда","раундов")}</p><ol class="archive-results archive-modal-results">${ranks.map((p,i)=>`<li class="${p.total===best?"winner":""}"><span class="place">${i+1}</span><span class="avatar">${esc(p.emoji)}</span><b>${esc(p.name)}</b><strong>${p.total}<small> очк.</small></strong></li>`).join("")}</ol>${isAdmin()?`<button class="archive-delete button secondary full" data-action="delete-archive" data-id="${game.id}">Удалить ошибочную партию</button>`:""}`)}
+  if(modal==="admin"){return shell(`<span class="eyebrow">Режим организатора</span><h2>${isAdmin()?"Доступ открыт":"Введите PIN"}</h2>${isAdmin()?`<p class="modal-text">Административные действия доступны до ${formatDate(adminSession.expiresAt)}.</p><button class="button secondary full" data-action="admin-logout">Выйти из режима организатора</button><div class="backup-actions"><b>Резервная копия</b><small>Все партии, раунды и игроки</small><div><button class="button secondary" data-action="export-backup">Скачать JSON</button><button class="button secondary" data-action="export-csv">Скачать CSV</button></div></div><details class="admin-merge"><summary>Объединить дубли профилей</summary><form id="merge-profiles-form"><select name="source">${(state.knownPlayers||[]).map(p=>`<option value="${p.id}">${esc(p.emoji)} ${esc(p.name)}</option>`).join("")}</select><span>→</span><select name="target">${(state.knownPlayers||[]).map(p=>`<option value="${p.id}">${esc(p.emoji)} ${esc(p.name)}</option>`).join("")}</select><button class="button primary full" type="submit">Объединить</button></form></details>`:`<form id="admin-login-form"><label class="field-label">Шестизначный PIN</label><input class="text-input admin-pin" name="pin" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" required autofocus><button class="button primary full" type="submit">Войти</button></form>`}`)}
+  if(modal==="archive-loading")return shell(`<span class="eyebrow">Архивная партия</span><h2>Загружаем результаты…</h2><div class="modal-loader"></div>`);
+  if(modal==="archive-game"){const game=archiveDetails.get(selectedArchiveId)||state.archive.find(g=>g.id===selectedArchiveId);if(!game)return"";const ranks=ranking(game),best=ranks[0]?.total;return shell(`<span class="eyebrow">Архивная партия</span><h2>${formatDate(game.finishedAt||game.startedAt)}</h2><p class="modal-text">${game.players.length} ${plural(game.players.length,"игрок","игрока","игроков")} · ${game.rounds.length} ${plural(game.rounds.length,"раунд","раунда","раундов")}</p><ol class="archive-results archive-modal-results">${ranks.map((p,i)=>`<li class="${p.total===best?"winner":""}"><span class="place">${i+1}</span><span class="avatar">${esc(p.emoji)}</span><b>${esc(p.name)}</b><strong>${p.total}<small> очк.</small></strong></li>`).join("")}</ol>${isAdmin()?`<button class="archive-delete button secondary full" data-action="delete-archive" data-id="${game.id}">Удалить ошибочную партию</button>`:""}`)}
   if(modal==="import"){const known=state.knownPlayers||[];return shell(`<span class="eyebrow">Ручной архив</span><h2>Добавить прошлую партию</h2><form id="import-setup-form"><label class="field-label">Дата игры</label><input class="text-input" type="date" name="date" max="${new Date().toISOString().slice(0,10)}" required><span class="field-label">Участники</span><div class="import-profiles">${known.map(p=>`<label><input type="checkbox" name="profile" value="${p.id}"><span>${esc(p.emoji)} ${esc(p.name)}</span></label>`).join("")}</div><button class="button primary full" type="submit">Продолжить к раундам</button></form>`)}
   if(modal==="import-rounds"){const profiles=manualImport.profileIds.map(id=>state.knownPlayers.find(p=>p.id===id)),quick=manualImport.quick;return shell(`<div class="import-head"><div><span class="eyebrow">${manualImport.date}</span><h2>${quick?"Быстрый ввод итогов":"Таблица как в блокноте"}</h2></div></div><div class="import-mode-tabs"><button type="button" class="${quick?"active":""}" data-action="toggle-import-mode" data-mode="quick">Только итоги</button><button type="button" class="${!quick?"active":""}" data-action="toggle-import-mode" data-mode="rounds">По раундам</button></div><form id="import-game-form">${quick?`<div class="quick-totals">${profiles.map(p=>`<label><span>${esc(p.emoji)} <b>${esc(p.name)}</b></span><input type="number" min="0" max="999" name="r0-${p.id}" placeholder="Итог" required></label>`).join("")}</div>`:`<div class="import-sheet-wrap"><table class="import-sheet"><thead><tr><th>Раунд</th>${profiles.map(p=>`<th>${esc(p.emoji)}<br>${esc(p.name)}</th>`).join("")}</tr></thead><tbody>${Array.from({length:manualImport.roundCount},(_,i)=>`<tr><th>${i+1}</th>${profiles.map(p=>`<td><input type="number" min="0" max="999" inputmode="numeric" name="r${i}-${p.id}"></td>`).join("")}</tr>`).join("")}</tbody><tfoot><tr><th>Итого</th>${profiles.map(p=>`<td><b data-import-total="${p.id}">0</b></td>`).join("")}</tr></tfoot></table></div><div class="import-actions"><button type="button" class="button secondary" data-action="import-add-round">＋ Раунд</button><button type="button" class="button secondary" data-action="import-remove-round">− Раунд</button></div>`}<button class="button primary full" type="submit">Сохранить прошлую партию</button></form>`)}
   if(modal==="player-card"){const p=(state.knownPlayers||[]).find(x=>x.id===selectedProfileId);if(!p)return"";return shell(renderPersonalCard(p))}
@@ -549,8 +576,9 @@ async function finishCurrentGame(keepPlayers) {
   busy = true; render();
   try {
     const result = await api.newGame(keepPlayers);
-    state = result?.currentGame ? result : await api.getState();
-    lastStateHash = JSON.stringify(state);
+    state=mergeLive(result?.currentGame?result:await getLive());
+    lastStateHash=JSON.stringify({...state,archive:[]});
+    if(cloudMode){invalidateHistory();setTimeout(()=>ensureHistory(true).catch(()=>{}),0)}else{state.archiveCount=state.archive.length;statsMemo={key:null,value:null}}
     celebrationGame = finished;
     winnerTab = "summary";
     modal = "winner";
@@ -564,7 +592,7 @@ root.addEventListener("click", async (event) => {
   const button = event.target.closest("[data-action], [data-tab]");
   if (!button) return;
   if (button.dataset.modal != null) return;
-  if (button.dataset.tab) { tab = button.dataset.tab; render(); scrollTo({ top: 0, behavior: "smooth" }); return; }
+  if(button.dataset.tab){tab=button.dataset.tab;render();scrollTo({top:0,behavior:"smooth"});if(tab==="archive"&&cloudMode&&!archiveFeed.loaded)loadArchivePage(true);if(tab==="stats"&&!historyLoaded)ensureHistory();return}
   const action = button.dataset.action;
   if(action==="open-admin"){modal="admin";render();return}
   if(action==="admin-logout"){adminSession=null;localStorage.removeItem(adminKey);modal=null;render();return}
@@ -572,11 +600,14 @@ root.addEventListener("click", async (event) => {
   if(action==="insight-prev"){const cards=buildDailyInsights(state.currentGame);insightIndex=(insightIndex-1+cards.length)%cards.length;render();return}
   if(action==="insight-next"){const cards=buildDailyInsights(state.currentGame);insightIndex=(insightIndex+1)%cards.length;render();return}
   if(action==="insight-go"){insightIndex=Number(button.dataset.index)||0;render();return}
-  if(action==="open-archive-game"){selectedArchiveId=button.dataset.id;olderArchiveOpen=true;modal="archive-game";render();return}
+  if(action==="open-archive-game"){openArchiveGame(button.dataset.id);return}
+  if(action==="archive-load-more"){loadArchivePage(false);return}
+  if(action==="export-backup"){exportBackup("json").then(()=>showToast("Резервная копия скачана")).catch(()=>{});return}
+  if(action==="export-csv"){exportBackup("csv").then(()=>showToast("Таблица CSV скачана")).catch(()=>{});return}
   if(action==="archive-page"){olderArchiveOpen=true;archivePage=Math.max(0,Number(button.dataset.page)||0);render();setTimeout(()=>document.querySelector(".archive-older")?.scrollIntoView({behavior:"smooth",block:"start"}),30);return}
   if(action==="award-tab"){gamificationTab=button.dataset.tabId;awardsOpen=true;render();return}
   if(action==="toggle-import-mode"){const quick=button.dataset.mode==="quick";if(manualImport.quick!==quick){manualImport.quick=quick;manualImport.roundCount=quick?1:5}render();return}
-  if(action==="delete-archive"&&confirm("Удалить эту архивную партию?")){mutate(()=>api.deleteGame(button.dataset.id),"Партия удалена");return}
+  if(action==="delete-archive"&&confirm("Удалить эту архивную партию?")){mutate(async()=>{const r=await api.deleteGame(button.dataset.id);invalidateHistory();setTimeout(()=>{ensureHistory(true);if(tab==="archive")loadArchivePage(true)},0);return r},"Партия удалена");return}
   if(action==="open-tv"){window.open(tvUrl(),"_blank","noopener");return}
   if(action==="copy-tv-link"){try{await navigator.clipboard.writeText(tvUrl());showToast("Ссылка на табло скопирована")}catch{prompt("Ссылка на табло",tvUrl())}return}
   if(action==="tv-fullscreen"){try{await document.documentElement.requestFullscreen();if(navigator.wakeLock)window.tvWakeLock=await navigator.wakeLock.request("screen")}catch{}return}
@@ -643,7 +674,7 @@ root.addEventListener("submit", (event) => {
   if(event.target.id==="import-game-form"){const fd=new FormData(event.target),rounds=[];for(let i=0;i<manualImport.roundCount;i++){const row={};let any=false,all=true;for(const id of manualImport.profileIds){const v=fd.get(`r${i}-${id}`);if(v!==""){any=true;row[id]=Number(v)}else all=false}if(any&&!all){showToast(`Заполните весь раунд ${i+1}`,"error");return}if(any)rounds.push(row)}if(!rounds.length){showToast("Добавьте хотя бы один раунд","error");return}mutate(()=>api.importGame(`${manualImport.date}T12:00:00`,manualImport.profileIds,rounds),"Прошлая партия добавлена");return}
   if (event.target.id === "player-form") { const name = new FormData(event.target).get("name")?.trim(); if (name) mutate(() => api.addPlayer(name, selectedEmoji), `${name} за столом`); }
   if(event.target.id==="edit-profile-form"){const pl=state.currentGame.players.find(x=>x.id===editingPlayerId),name=new FormData(event.target).get("name")?.trim();if(name!==pl.name&&!isAdmin()){modal="admin";render();showToast("Переименование доступно организатору");return}mutate(()=>name!==pl.name?api.updateProfile(pl.profileId,name,selectedEmoji):api.updatePlayerIcon(pl.id,selectedEmoji),"Профиль обновлён");}
-  if (event.target.id === "round-form") mutate(() => api.finalizeRound(), "Раунд завершён");
+  if(event.target.id==="round-form")mutate(async()=>{const key=`korova-round-token-${roomCode}-${state.currentGame.id}`;let token=localStorage.getItem(key);if(!token){token=crypto.randomUUID();localStorage.setItem(key,token)}const result=await api.finalizeRound(token);localStorage.removeItem(key);return result},"Раунд завершён");
   if (event.target.id === "edit-round-form") { const form=new FormData(event.target),scores={};for(const player of state.currentGame.players){const raw=form.get(player.id);if(raw===""||raw==null||Number(raw)<0||!Number.isInteger(Number(raw))){showToast(`Укажите очки для ${player.name}`,"error");return}scores[player.id]=Number(raw)}mutate(()=>api.updateRound(editingRoundId,scores),"Результат раунда исправлен"); }
 });
 
@@ -672,8 +703,8 @@ async function syncStateNow() {
   }
   syncInFlight = true;
   try {
-    const next = await api.getState();
-    const hash = JSON.stringify(next);
+    const next=mergeLive(await getLive());
+    const hash=JSON.stringify({...next,archive:[]});
     if (hash !== lastStateHash) {
       if(TV_MODE&&state?.currentGame?.id===next.currentGame?.id&&(next.currentGame?.rounds?.length||0)>(state.currentGame?.rounds?.length||0)){tvEventUntil=Date.now()+6500;clearTimeout(tvEventTimer);tvEventTimer=setTimeout(()=>render(),6600)}
       if(TV_MODE&&state?.currentGame?.id&&next.currentGame?.id!==state.currentGame.id){const finished=(next.archive||[]).find(g=>g.id===state.currentGame.id);if(finished){tvCelebrationGame=finished;tvCelebrationUntil=Date.now()+15000;clearTimeout(tvCelebrationTimer);tvCelebrationTimer=setTimeout(()=>{tvCelebrationGame=null;render()},15100)}}
@@ -702,10 +733,11 @@ async function init() {
   render();
   try {
     await api.ensure();
-    state = await api.getState();
-    lastStateHash = JSON.stringify(state);
+    state=mergeLive(await getLive());
+    lastStateHash=JSON.stringify({...state,archive:[]});
     render();
     scheduleSync(5000);
+    if(cloudMode)setTimeout(()=>{if(tab==="game"||TV_MODE)ensureHistory().catch(()=>{})},2500);
   } catch (error) {
     root.innerHTML = `<main class="fatal"><div class="logo-card mini"><b>006</b></div><h1>Не удалось открыть комнату</h1><p>${esc(error.message)}</p><button class="button primary" onclick="location.reload()">Попробовать снова</button></main>`;
   }
