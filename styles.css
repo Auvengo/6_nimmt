@@ -382,3 +382,27 @@
   .podium-place{position:static!important;width:30px;height:30px;margin:0 0 7px;border:2px solid var(--ink);border-radius:50%;display:grid;place-items:center;background:#e7e2d6;color:var(--ink);font-style:normal;font-size:14px;font-weight:950;box-shadow:2px 2px 0 rgba(32,30,27,.28)}
   .mobile-podium .place-1 .podium-place{background:#f4c84a}.mobile-podium .place-2 .podium-place{background:#e1e5e6}.mobile-podium .place-3 .podium-place{background:#d99a64}
 }
+
+
+/* v6.4.5 — спокойная мобильная дуэль и чистый архив */
+.archive-results li.profile-surface{box-shadow:none!important;padding-left:0!important;padding-right:0!important;border-radius:0}
+.archive-results li.profile-surface:after{opacity:.055}
+.archive-page .profile-compact{box-shadow:none!important;padding-left:0!important}
+.archive-page .profile-compact:after{display:none!important}
+.archive-page .winner-badge.profile-surface{box-shadow:2px 2px 0 var(--ink)!important}
+.archive-page .winner-badge.profile-surface:after{display:none!important}
+.archive-results .avatar.profile-avatar{width:40px;height:44px;display:grid;place-items:center;align-self:center;border:1px solid var(--profile-accent)!important;border-radius:8px;background:var(--profile-soft);font-size:25px;line-height:1;overflow:hidden}
+.archive-results li,.archive-modal-results li{grid-template-columns:25px 42px minmax(0,1fr) auto!important}
+.archive-page .winner-badge>.profile-avatar{width:38px;height:42px;display:grid;place-items:center;border:1px solid var(--profile-accent)!important;border-radius:8px;background:var(--profile-soft);font-size:25px;line-height:1;overflow:hidden}
+@media(max-width:760px){
+  .duel-feature-v64{grid-template-columns:minmax(0,1fr) 78px minmax(0,1fr)!important;gap:7px!important;align-items:center}
+  .duel-person{height:60px!important;min-width:0;padding:3px 0!important;border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;display:flex!important;flex-direction:row!important;justify-content:flex-start!important;gap:7px!important;text-align:left!important}
+  .duel-person:after{display:none!important}
+  .duel-person .profile-avatar{width:44px!important;height:48px!important;flex:0 0 44px!important;border:1px solid var(--profile-accent)!important;border-radius:9px!important;background:var(--profile-soft)!important;font-size:29px!important;line-height:1;overflow:hidden}
+  .duel-person b{font-size:14px;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .duel-feature-v64>.duel-person:nth-of-type(3){flex-direction:row-reverse!important;text-align:right!important}
+  .duel-scoreline-v64{grid-template-columns:29px 12px 29px!important}
+  .duel-scoreline-v64 strong{font-size:27px!important}.duel-scoreline-v64 small{font-size:8px!important}.duel-scoreline-v64 em{font-size:17px!important}
+  .duel-meta{margin-top:5px!important;font-size:10px!important}
+  .duel-last{margin-top:10px!important;min-height:31px!important}
+}

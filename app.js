@@ -1,8 +1,9 @@
 const EMOJI_GROUPS = [
   {name:"Ферма",items:["🐮","🐂","🐄","🤠","🐃","🐷","🐴","🐔","🐑","🐐","🦆","🐓"]},
-  {name:"Звери",items:["🐶","🐱","🦊","🐭","🐹","🐰","🐻","🐼","🐨","🐯","🦁","🐸","🐵","🐧","🐦","🐺","🐗","🦝","🦄","🦥"]},
-  {name:"Маленькие",items:["🐝","🐛","🐌","🐞","🐜","🐢","🐍","🦂","🦀","🐙","🐬","🐳","🦋","🐙"]},
-  {name:"Знаки",items:["🌵","🌽","🎲","🃏","⭐","🔥","🍀","🌙","⚡","🍉","🌈","🚀","🎯","🏆","💎","🎸","🧠","👑"]}
+  {name:"Звери",items:["🐶","🐱","🦊","🐭","🐹","🐰","🐻","🐼","🐨","🐯","🦁","🐸","🐵","🐧","🐦","🐺","🐗","🦝","🦄","🦥","🦖","🦭","🦈","🦚","🦩","🦫","🙈"]},
+  {name:"Маленькие",items:["🐝","🐛","🐌","🐞","🐜","🐢","🐍","🦂","🦀","🐙","🐬","🐳","🦋","🪼"]},
+  {name:"Персонажи",items:["🤔","👺","😈","🤖","🎃","👻","🫠","🤯","🥷","🎅","🧛‍♂️","🌝","🌚"]},
+  {name:"Знаки",items:["🌵","🌽","🎲","🃏","⭐","🔥","🍀","🌙","⚡","🍉","🌈","🚀","🎯","🏆","💎","🌸","👑"]}
 ];
 const EMOJIS = [...new Set(EMOJI_GROUPS.flatMap(x=>x.items))];
 const PROFILE_PALETTES=[
@@ -245,7 +246,7 @@ function invalidateHistory(){historyLoaded=!cloudMode;statsMemo={key:null,value:
 async function loadArchivePage(reset=false){if(!cloudMode)return;if(archiveFeed.loading||(!reset&&archiveFeed.loaded&&!archiveFeed.hasMore))return;if(reset)archiveFeed={items:[],nextCursor:null,hasMore:false,loading:true,loaded:false};else archiveFeed.loading=true;render();try{const page=await api.archivePage(reset?null:archiveFeed.nextCursor,12),seen=new Set(archiveFeed.items.map(x=>x.id));archiveFeed.items=[...archiveFeed.items,...(page.items||[]).filter(x=>!seen.has(x.id))];archiveFeed.nextCursor=page.nextCursor||null;archiveFeed.hasMore=!!page.hasMore;archiveFeed.loaded=true}catch(e){showToast("Не удалось загрузить архив","error")}finally{archiveFeed.loading=false;render()}}
 async function openArchiveGame(id){selectedArchiveId=id;olderArchiveOpen=true;const existing=archiveDetails.get(id)||(!cloudMode?(state.archive||[]).find(g=>g.id===id&&g.players&&g.rounds):null);if(existing){archiveDetails.set(id,existing);modal="archive-game";render();return}modal="archive-loading";render();try{const game=await api.gameDetail(id);if(!game)throw new Error("Партия не найдена");archiveDetails.set(id,game);modal="archive-game";render()}catch(e){modal=null;render();showToast(e.message||"Не удалось открыть партию","error")}}
 function downloadText(name,text,type){const blob=new Blob([text],{type}),url=URL.createObjectURL(blob),link=document.createElement("a");link.href=url;link.download=name;link.click();setTimeout(()=>URL.revokeObjectURL(url),1000)}
-async function exportBackup(format){await ensureHistory();const stamp=new Date().toISOString().slice(0,10);if(format==="json"){downloadText(`korova-${roomCode}-${stamp}.json`,JSON.stringify({version:"6.4.4",exportedAt:new Date().toISOString(),room:state.room,knownPlayers:state.knownPlayers,currentGame:state.currentGame,archive:state.archive},null,2),"application/json");return}const rows=[["Дата","Игрок","Место","Очки","Раунды","Игроков"]];for(const g of state.archive)rankingFor(g).forEach((x,i)=>rows.push([(g.finishedAt||g.startedAt||"").slice(0,10),x.name,i+1,x.total,g.rounds.length,g.players.length]));const csv="\ufeff"+rows.map(r=>r.map(v=>`"${String(v).replaceAll('"','""')}"`).join(";")).join("\n");downloadText(`korova-${roomCode}-${stamp}.csv`,csv,"text/csv;charset=utf-8")}
+async function exportBackup(format){await ensureHistory();const stamp=new Date().toISOString().slice(0,10);if(format==="json"){downloadText(`korova-${roomCode}-${stamp}.json`,JSON.stringify({version:"6.4.5",exportedAt:new Date().toISOString(),room:state.room,knownPlayers:state.knownPlayers,currentGame:state.currentGame,archive:state.archive},null,2),"application/json");return}const rows=[["Дата","Игрок","Место","Очки","Раунды","Игроков"]];for(const g of state.archive)rankingFor(g).forEach((x,i)=>rows.push([(g.finishedAt||g.startedAt||"").slice(0,10),x.name,i+1,x.total,g.rounds.length,g.players.length]));const csv="\ufeff"+rows.map(r=>r.map(v=>`"${String(v).replaceAll('"','""')}"`).join(";")).join("\n");downloadText(`korova-${roomCode}-${stamp}.csv`,csv,"text/csv;charset=utf-8")}
 
 function esc(value = "") {
   return String(value).replace(/[&<>'"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" }[c]));
