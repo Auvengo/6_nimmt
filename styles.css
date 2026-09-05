@@ -406,3 +406,9 @@
   .duel-meta{margin-top:5px!important;font-size:10px!important}
   .duel-last{margin-top:10px!important;min-height:31px!important}
 }
+
+
+/* v6.4.6 — надёжная карусель и честные временные титулы */
+.record-grid>button.record-static{cursor:default;grid-template-columns:auto minmax(0,1fr) auto!important}
+.record-grid>button.record-static:after{display:none!important;content:none!important}
+.record-grid>button.record-static:hover{background:#fff}
