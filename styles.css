@@ -412,3 +412,11 @@
 .record-grid>button.record-static{cursor:default;grid-template-columns:auto minmax(0,1fr) auto!important}
 .record-grid>button.record-static:after{display:none!important;content:none!important}
 .record-grid>button.record-static:hover{background:#fff}
+
+
+/* v6.5 — новая серия временных титулов */
+.award-period-note{display:flex;gap:10px;align-items:center;padding:11px 16px;background:#fff4c8;border-bottom:1px solid var(--line);color:#5f4a10}
+.award-period-note>span{width:30px;height:30px;flex:0 0 30px;display:grid;place-items:center;border:1px solid #9b7918;border-radius:50%;font-size:18px;font-weight:900}
+.award-period-note>div{display:flex;flex-direction:column;min-width:0}.award-period-note b{font-size:12px}.award-period-note small{font-size:10px;color:#776b53}
+@media(min-width:761px){.title-list>.title-row:last-child:nth-child(odd){grid-column:1/-1;border-right:0}}
+@media(max-width:760px){.award-period-note{padding:10px 12px}.award-period-note small{line-height:1.3}.title-row{cursor:default}}
