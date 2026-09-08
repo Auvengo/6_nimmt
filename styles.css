@@ -433,3 +433,17 @@
 .award-help-wrap.open .award-help-popover,.award-help-wrap:hover .award-help-popover,.award-help:focus-visible+.award-help-popover{display:block}
 .title-row>span{display:flex;flex-direction:column;align-items:flex-end}.title-row>span>b{color:#876500}.title-row>span>small{font-size:9px;color:#7b6a36;margin-top:2px}
 @media(max-width:760px){.awards-hub>header{display:flex;padding:10px 12px}.award-tabs{margin-top:0}.award-help-popover{position:fixed;top:auto;right:20px;left:20px;bottom:24px;width:auto;max-height:45vh;overflow:auto;font-size:12px;box-shadow:0 0 0 9999px rgba(15,25,21,.38),4px 4px 0 rgba(32,30,27,.25)}.award-help-popover:before{display:none}.award-help{width:34px;height:34px}.title-row>span{max-width:38%}}
+
+
+/* v6.5.3 — табло: безопасные эмодзи и финальный показ */
+.tv-wait .forecast-star .profile-avatar,.tv-wait .form-lead .profile-avatar{font-size:clamp(25px,1.65vw,33px)!important;line-height:1!important;overflow:hidden!important;text-indent:0;display:grid!important;place-items:center!important}
+.tv-finale-debrief{padding:clamp(24px,2vw,40px) clamp(30px,3vw,60px);justify-content:flex-start}
+.tv-finale-debrief h1{font-size:clamp(38px,3.3vw,66px);margin:.25vw 0 1.2vw}
+.tv-story-grid{width:100%;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:clamp(12px,1vw,20px);margin:auto 0}
+.tv-story-grid article{min-height:clamp(180px,18vw,300px);padding:clamp(18px,1.5vw,30px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:clamp(10px,.8vw,16px);background:#fffaf0;border:2px solid #bca34e;border-radius:clamp(10px,.7vw,15px)}
+.tv-story-grid article>span{font-size:clamp(42px,3.5vw,70px);line-height:1}.tv-story-grid b{font-size:clamp(20px,1.45vw,29px)}.tv-story-grid p{margin:.45vw 0 0;font-size:clamp(13px,.9vw,18px);line-height:1.35;color:#625b4c}
+.tv-awards-grid{width:100%;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:repeat(3,minmax(0,1fr));gap:clamp(8px,.65vw,13px);margin:auto 0;min-height:0}
+.tv-awards-grid article{padding:clamp(10px,.8vw,16px);display:grid;grid-template-columns:clamp(38px,3vw,60px) minmax(0,1fr);gap:clamp(8px,.7vw,14px);align-items:center;background:#fffaf0;border:2px solid #c3a84d;border-radius:clamp(8px,.55vw,12px);text-align:left;min-height:0;overflow:hidden}
+.tv-awards-grid article>span{font-size:clamp(27px,2vw,40px);line-height:1;text-align:center}.tv-awards-grid article>div{min-width:0}.tv-awards-grid small{display:block;font-size:clamp(10px,.7vw,14px);font-weight:900;color:#806000;text-transform:uppercase}.tv-awards-grid b{display:block;font-size:clamp(17px,1.2vw,24px);overflow:hidden;text-overflow:ellipsis}.tv-awards-grid p{margin:.25vw 0 0;font-size:clamp(11px,.75vw,15px);color:#625b4c}
+.tv-finale-progress{position:absolute;left:50%;bottom:clamp(27px,2.2vw,44px);transform:translateX(-50%);display:flex;gap:8px}.tv-finale-progress i{width:9px;height:9px;border-radius:50%;background:#b9a66b}.tv-finale-progress i.active{width:28px;border-radius:99px;background:#123f34}
+@media(max-height:800px) and (min-width:900px){.tv-finale-debrief{padding:14px 28px 30px}.tv-finale-debrief h1{font-size:38px;margin:0 0 8px}.tv-story-grid article{min-height:150px;padding:14px}.tv-story-grid article>span{font-size:40px}.tv-story-grid b{font-size:19px}.tv-story-grid p{font-size:12px}.tv-awards-grid article{padding:8px 12px}.tv-finale-progress{bottom:24px}}
