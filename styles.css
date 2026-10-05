@@ -473,3 +473,7 @@
 .modal-backdrop:has(.archive-game-modal){padding:8px}
 .archive-game-modal .winner-section-head small{font-size:11px;letter-spacing:.14em}.archive-game-modal .winner-section-head h2{font-size:28px}.archive-game-modal .final-subtitle{font-size:18px;letter-spacing:.09em;margin:26px 0 12px}.archive-game-modal .final-story-grid b{font-size:17px}.archive-game-modal .final-story-grid p{font-size:13px;line-height:1.45;margin-top:5px}
 @media(max-width:760px){.archive-game-modal{width:100%;max-width:none}.archive-game-tabs button{font-size:12px}.archive-game-modal .winner-section-head small{font-size:10px}.archive-game-modal .winner-section-head h2{font-size:24px}.archive-game-modal .final-subtitle{font-size:17px;margin:23px 0 10px}.archive-game-modal .final-story-grid b{font-size:16px}.archive-game-modal .final-story-grid p{font-size:12px}.archive-game-body{scrollbar-gutter:stable}}
+
+/* v6.6.7 — archive ordering and clipboard sharing */
+@media(min-width:761px){.archive-detail-results{grid-template-rows:repeat(var(--archive-rows),auto);grid-auto-flow:column}}
+@media(max-width:760px){.archive-detail-results{grid-template-rows:none;grid-auto-flow:row}.archive-winner-spotlight{display:none}.archive-score-pane{padding-top:11px}}
