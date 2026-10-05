@@ -337,12 +337,12 @@
 .journey-steps>span small{font-size:8px;color:var(--muted);margin-bottom:3px}.journey-steps>span b{font-size:20px}
 .journey-steps>span.first{background:#fff0a8;border-color:#a67b00}.journey-steps>span.last{box-shadow:inset 0 0 0 2px var(--profile-accent)}
 .journey-steps>i{font-style:normal;color:#a69b7d;font-size:12px}
-.winner-actions [data-action="share-winner-pane"]{min-width:210px}
+.winner-actions .share-final-bundle{min-width:245px}
 @media(max-width:760px){
   .rank-journey{grid-template-columns:1fr;gap:8px;padding:9px;min-height:0}
   .journey-player{grid-template-columns:40px minmax(0,1fr)}.journey-player .profile-avatar{width:36px;height:40px;font-size:23px}
   .journey-steps{gap:3px}.journey-steps>span{width:34px;height:39px}.journey-steps>span b{font-size:17px}.journey-steps>i{font-size:10px}
-  .winner-actions [data-action="share-winner-pane"]{min-width:0}
+  .winner-actions .share-final-bundle{min-width:0}
 }
 .winner-pane{overflow-x:hidden}
 
