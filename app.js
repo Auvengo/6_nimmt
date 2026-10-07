@@ -37,6 +37,7 @@ let deferredInstallPrompt = null;
 let statsPeriod = "all";
 let selectedProfileId = null, selectedOpponentId = null, manualImport = null;
 let gamificationTab = "temporary";
+const expandedPermanentAwards = new Set();
 let awardsOpen = false;
 let olderArchiveOpen = false, archivePage = 0, selectedArchiveId = null, archiveDetailTab = "summary";
 let archiveFeed={items:[],nextCursor:null,hasMore:false,loading:false,loaded:false},archiveObserver=null;
@@ -49,7 +50,10 @@ const INSIGHT_DELAY = 9000;
 let tvCelebrationGame = null, tvCelebrationUntil = 0, tvCelebrationStarted = 0, tvCelebrationTimer = null, tvCelebrationPhaseTimer = null;
 let tvEventUntil = 0, tvEventTimer = null;
 const pendingKey = `korova-pending-${roomCode}`;
+const snapshotKey = `korova-active-snapshot-${roomCode}`;
 let pendingWrites = JSON.parse(localStorage.getItem(pendingKey) || "[]");
+let flushInFlight = null, roundSubmitInFlight = false;
+let lastSyncAt = null, syncIssue = false, reloadingForUpdate = false;
 const adminKey=`korova-admin-${roomCode}`;let adminSession=JSON.parse(localStorage.getItem(adminKey)||"null");
 const importDraftKey=`korova-import-draft-${roomCode}`;
 function isAdmin(){return !cloudMode||!!(adminSession?.token&&new Date(adminSession.expiresAt)>new Date())}
@@ -239,6 +243,12 @@ function hasRoundDetails(game){return game?.scoreMode!=="totals"}
 function scoreModeLabel(game){return hasRoundDetails(game)?`${game.rounds?.length||game.roundCount||0} ${plural(game.rounds?.length||game.roundCount||0,"раунд","раунда","раундов")}`:"Только итоги"}
 function setupArchiveAutoLoad(){archiveObserver?.disconnect();if(!cloudMode||tab!=="archive"||!archiveFeed.hasMore||archiveFeed.loading)return;const el=document.querySelector(".archive-auto-sentinel");if(!el||!window.IntersectionObserver)return;archiveObserver=new IntersectionObserver(entries=>{if(entries.some(x=>x.isIntersecting))loadArchivePage(false)},{rootMargin:"220px"});archiveObserver.observe(el)}
 function archiveTotal(){return Number(state?.archiveCount??state?.archive?.length??0)}
+function activeSnapshot(){if(!state?.currentGame)return null;return{savedAt:new Date().toISOString(),room:state.room||{code:roomCode},knownPlayers:state.knownPlayers||[],currentGame:state.currentGame,archiveCount:archiveTotal()}}
+function saveActiveSnapshot(){const value=activeSnapshot();if(value)try{localStorage.setItem(snapshotKey,JSON.stringify(value))}catch{}}
+function loadActiveSnapshot(){try{const value=JSON.parse(localStorage.getItem(snapshotKey)||"null");return value?.currentGame?{room:value.room||{code:roomCode},knownPlayers:value.knownPlayers||[],currentGame:value.currentGame,archive:[],archiveCount:Number(value.archiveCount||0),snapshotSavedAt:value.savedAt}:null}catch{return null}}
+function markSynchronized(){lastSyncAt=new Date();syncIssue=false;saveActiveSnapshot()}
+function syncBadgeMarkup(){const time=lastSyncAt?.toLocaleTimeString("ru-RU",{hour:"2-digit",minute:"2-digit"});if(!navigator.onLine)return`<span class="sync-badge offline" title="Черновики останутся на этом устройстве">Нет связи${pendingWrites.length?` · в очереди ${pendingWrites.length}`:""}</span>`;if(pendingWrites.length)return`<span class="sync-badge pending">Сохраняем: ${pendingWrites.length}</span>`;if(syncIssue)return`<span class="sync-badge pending">Проверяем связь…</span>`;return`<span class="sync-badge saved">${time?`Сохранено в ${time}`:"Всё сохранено"}</span>`}
+function roundSafetyMarkup(){const online=navigator.onLine,pending=pendingWrites.length;return`<div class="round-safety ${online?pending?"pending":"saved":"offline"}"><span><i></i>${online?pending?"Отправляем черновик":"Черновик сохранён":"Черновик сохранён на устройстве"}</span><span>Повторное нажатие защищено</span></div>`}
 function mergeLive(next){const hasArchive=Array.isArray(next?.archive);if(hasArchive){historyLoaded=true;statsMemo={key:null,value:null}}const archive=hasArchive?next.archive:(historyLoaded?(state?.archive||[]):(state?.archive||[]));return{...next,archive,archiveCount:Number(next.archiveCount??(hasArchive?next.archive.length:null)??state?.archiveCount??archive.length)}}
 async function getLive(){if(!cloudMode)return api.getLiveState();try{return await api.getLiveState()}catch{return api.getState()}}
 async function ensureHistory(force=false){if(!cloudMode){historyLoaded=true;return state.archive}if(historyLoaded&&!force)return state.archive;if(historyLoading)return historyLoading;historyLoading=api.getHistory().then(rows=>{state.archive=Array.isArray(rows)?rows:[];state.archiveCount=state.archive.length;historyLoaded=true;statsMemo={key:null,value:null};lastStateHash=JSON.stringify({...state,archive:[]});render();return state.archive}).catch(e=>{showToast("Не удалось загрузить историю","error");throw e}).finally(()=>historyLoading=null);return historyLoading}
@@ -246,7 +256,7 @@ function invalidateHistory(){historyLoaded=!cloudMode;statsMemo={key:null,value:
 async function loadArchivePage(reset=false){if(!cloudMode)return;if(archiveFeed.loading||(!reset&&archiveFeed.loaded&&!archiveFeed.hasMore))return;if(reset)archiveFeed={items:[],nextCursor:null,hasMore:false,loading:true,loaded:false};else archiveFeed.loading=true;render();try{const page=await api.archivePage(reset?null:archiveFeed.nextCursor,12),seen=new Set(archiveFeed.items.map(x=>x.id));archiveFeed.items=[...archiveFeed.items,...(page.items||[]).filter(x=>!seen.has(x.id))];archiveFeed.nextCursor=page.nextCursor||null;archiveFeed.hasMore=!!page.hasMore;archiveFeed.loaded=true}catch(e){showToast("Не удалось загрузить архив","error")}finally{archiveFeed.loading=false;render()}}
 async function openArchiveGame(id){selectedArchiveId=id;archiveDetailTab="summary";olderArchiveOpen=true;const existing=archiveDetails.get(id)||(!cloudMode?(state.archive||[]).find(g=>g.id===id&&g.players&&g.rounds):null);if(existing){archiveDetails.set(id,existing);modal="archive-game";render();return}modal="archive-loading";render();try{const game=await api.gameDetail(id);if(!game)throw new Error("Партия не найдена");archiveDetails.set(id,game);modal="archive-game";render()}catch(e){modal=null;render();showToast(e.message||"Не удалось открыть партию","error")}}
 function downloadText(name,text,type){const blob=new Blob([text],{type}),url=URL.createObjectURL(blob),link=document.createElement("a");link.href=url;link.download=name;link.click();setTimeout(()=>URL.revokeObjectURL(url),1000)}
-async function exportBackup(format){await ensureHistory();const stamp=new Date().toISOString().slice(0,10);if(format==="json"){downloadText(`korova-${roomCode}-${stamp}.json`,JSON.stringify({version:"6.6.9",exportedAt:new Date().toISOString(),room:state.room,knownPlayers:state.knownPlayers,currentGame:state.currentGame,archive:state.archive},null,2),"application/json");return}const rows=[["Дата","Игрок","Место","Очки","Раунды","Игроков"]];for(const g of state.archive)rankingFor(g).forEach((x,i)=>rows.push([(g.finishedAt||g.startedAt||"").slice(0,10),x.name,i+1,x.total,g.rounds.length,g.players.length]));const csv="\ufeff"+rows.map(r=>r.map(v=>`"${String(v).replaceAll('"','""')}"`).join(";")).join("\n");downloadText(`korova-${roomCode}-${stamp}.csv`,csv,"text/csv;charset=utf-8")}
+async function exportBackup(format){await ensureHistory();const stamp=new Date().toISOString().slice(0,10);if(format==="json"){downloadText(`korova-${roomCode}-${stamp}.json`,JSON.stringify({version:"6.8.0",exportedAt:new Date().toISOString(),room:state.room,knownPlayers:state.knownPlayers,currentGame:state.currentGame,archive:state.archive},null,2),"application/json");return}const rows=[["Дата","Игрок","Место","Очки","Раунды","Игроков"]];for(const g of state.archive)rankingFor(g).forEach((x,i)=>rows.push([(g.finishedAt||g.startedAt||"").slice(0,10),x.name,i+1,x.total,g.rounds.length,g.players.length]));const csv="\ufeff"+rows.map(r=>r.map(v=>`"${String(v).replaceAll('"','""')}"`).join(";")).join("\n");downloadText(`korova-${roomCode}-${stamp}.csv`,csv,"text/csv;charset=utf-8")}
 
 function esc(value = "") {
   return String(value).replace(/[&<>'"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" }[c]));
@@ -320,21 +330,19 @@ function showToast(message, kind = "ok") {
 }
 
 async function mutate(action, success) {
-  if (busy) return;
-  busy = true;
-  render();
+  if (busy) { showToast("Предыдущее действие ещё сохраняется"); return false; }
+  busy = true; render();
   try {
     const result = await action();
     state=mergeLive(result?.currentGame?result:await getLive());
     lastStateHash=JSON.stringify({...state,archive:[]});
-    modal = null;
-    busy = false;
-    render();
-    if (success) showToast(success);
+    markSynchronized();modal=null;busy=false;render();scheduleSync(5000);
+    if(success)showToast(success);
+    return true;
   } catch (error) {
-    busy = false;
-    render();
-    showToast(error.message || "Что-то пошло не так", "error");
+    busy=false;syncIssue=cloudMode;saveActiveSnapshot();render();scheduleSync(syncRetryDelay);
+    showToast(error.message||"Изменение не сохранено — данные на экране не потеряны","error");
+    return false;
   }
 }
 
@@ -398,7 +406,7 @@ function render() {
           <span class="brand-card"><span>🐮</span><b>006</b></span>
           <span><strong>Коровосчёт</strong><small>Не бери шестую</small></span>
         </a>
-        <div class="room-tools"><button class="tv-open" data-action="open-tv" title="Большое табло">📺 <span>Табло</span></button><button class="admin-pill ${isAdmin()?"active":""}" data-action="open-admin">${isAdmin()?"🔓 Организатор":"🔒 Войти"}</button><span class="sync-badge ${!navigator.onLine?"offline":pendingWrites.length?"pending":"saved"}">${!navigator.onLine?`Нет соединения · не отправлено ${pendingWrites.length}`:pendingWrites.length?`Не отправлено: ${pendingWrites.length}`:"Всё сохранено"}</span>
+        <div class="room-tools"><button class="tv-open" data-action="open-tv" title="Большое табло">📺 <span>Табло</span></button><button class="admin-pill ${isAdmin()?"active":""}" data-action="open-admin">${isAdmin()?"🔓 Организатор":"🔒 Войти"}</button>${syncBadgeMarkup()}
           <span class="room-label">Комната <b>${roomCode}</b></span>
           <button class="icon-btn" data-action="open-share" title="Поделиться и установить" aria-label="Поделиться и установить">${icon("share")}</button>
         </div>
@@ -547,8 +555,8 @@ function renderEmptyPlayers() {
 
 function renderScoreEntry(game, reached66) {
   const roundNo=nextRoundNumber(game);
-  const drafts=game.draftScores||{},players=[...game.players].sort((a,b)=>a.seat-b.seat),ready=players.every(p=>Object.prototype.hasOwnProperty.call(drafts,p.id));
-  return `<section class="score-section"><div class="section-heading light"><div><span class="section-no">02</span><h2>Очки раунда ${roundNo}</h2></div><span class="hint">Заполнено ${Object.keys(drafts).length} из ${players.length}</span></div><p class="score-collab">Заполняйте как удобно: один человек за всех или каждый со своего телефона.</p>${reached66?`<div class="game-over continue"><span>🐮</span><div><b>Рубеж 66 пройден</b><small>Игра продолжается до ручного завершения.</small></div></div>`:""}<form id="round-form" class="score-form"><div class="score-inputs">${players.map(p=>{const has=Object.prototype.hasOwnProperty.call(drafts,p.id);return `<label ${profileAttrs(p,`score-row ${has?"score-ready":""}`)}><span class="score-person"><i>${esc(p.emoji)}</i><b>${esc(p.name)}</b><small>${has?"результат сохранён":"значение не введено"}</small></span><span class="number-wrap"><span>${has?"✓":"＋"}</span><input data-draft-player="${p.id}" inputmode="numeric" min="0" max="999" type="number" value="${has?drafts[p.id]:""}" placeholder="—" aria-label="Очки игрока ${esc(p.name)}"></span></label>`}).join("")}</div><div class="score-actions"><button class="button primary large" type="submit" ${ready&&!busy?"":"disabled"}>${icon("save")} ${ready?`Завершить раунд ${roundNo}`:"Заполните все результаты"}</button>${game.rounds.length?`<button class="button ghost" type="button" data-action="undo">${icon("undo")} Отменить последний</button>`:""}<button class="button ghost" type="button" data-action="open-reset">${icon("refresh")} Новая игра</button><button class="button finish" type="button" data-action="open-finish" ${game.rounds.length?"":'disabled'}>${icon("flag")} Завершить игру</button></div></form><div class="mobile-round-bar"><span><b>${Object.keys(drafts).length} из ${players.length}</b><small>${ready?`Раунд ${roundNo} готов`:`Раунд ${roundNo} · заполните результаты`}</small></span><button class="button primary" type="submit" form="round-form" ${ready&&!busy?"":"disabled"}>${icon("save")} ${ready?`Завершить раунд ${roundNo}`:"Осталось "+(players.length-Object.keys(drafts).length)}</button></div></section>`;
+  const drafts=game.draftScores||{},players=[...game.players].sort((a,b)=>a.seat-b.seat),ready=players.every(p=>Object.prototype.hasOwnProperty.call(drafts,p.id)),canFinalize=ready&&!busy&&!roundSubmitInFlight&&navigator.onLine&&!pendingWrites.length,submitLabel=!navigator.onLine?"Нет соединения":pendingWrites.length?"Дождитесь синхронизации":ready?`Завершить раунд ${roundNo}`:"Заполните все результаты";
+  return `<section class="score-section"><div class="section-heading light"><div><span class="section-no">02</span><h2>Очки раунда ${roundNo}</h2></div><span class="hint">Заполнено ${Object.keys(drafts).length} из ${players.length}</span></div><p class="score-collab">Заполняйте как удобно: один человек за всех или каждый со своего телефона.</p>${roundSafetyMarkup()}${reached66?`<div class="game-over continue"><span>🐮</span><div><b>Рубеж 66 пройден</b><small>Игра продолжается до ручного завершения.</small></div></div>`:""}<form id="round-form" class="score-form"><div class="score-inputs">${players.map(p=>{const has=Object.prototype.hasOwnProperty.call(drafts,p.id);return `<label ${profileAttrs(p,`score-row ${has?"score-ready":""}`)}><span class="score-person"><i>${esc(p.emoji)}</i><b>${esc(p.name)}</b><small>${has?"результат сохранён":"значение не введено"}</small></span><span class="number-wrap"><span>${has?"✓":"＋"}</span><input data-draft-player="${p.id}" inputmode="numeric" min="0" max="999" type="number" value="${has?drafts[p.id]:""}" placeholder="—" aria-label="Очки игрока ${esc(p.name)}"></span></label>`}).join("")}</div><div class="score-actions"><button class="button primary large" type="submit" ${canFinalize?"":"disabled"}>${icon("save")} ${submitLabel}</button>${game.rounds.length?`<button class="button ghost" type="button" data-action="undo">${icon("undo")} Отменить последний</button>`:""}<button class="button ghost" type="button" data-action="open-reset">${icon("refresh")} Новая игра</button><button class="button finish" type="button" data-action="open-finish" ${game.rounds.length?"":'disabled'}>${icon("flag")} Завершить игру</button></div></form><div class="mobile-round-bar"><span><b>${Object.keys(drafts).length} из ${players.length}</b><small>${ready?`Раунд ${roundNo} готов`:`Раунд ${roundNo} · заполните результаты`}</small></span><button class="button primary" type="submit" form="round-form" ${canFinalize?"":"disabled"}>${icon("save")} ${ready?submitLabel:"Осталось "+(players.length-Object.keys(drafts).length)}</button></div></section>`;
 }
 function renderRounds(game) {
  const players=[...game.players].sort((a,b)=>a.seat-b.seat);
@@ -659,8 +667,10 @@ function permanentAwards(profileId){const m=playerAnalytics(profileId);return PE
 function awardsFor(profileId){return temporaryTitles().filter(t=>t.holders.some(p=>p.id===profileId)).map(t=>t.name)}
 function renderAwardsHub(){
   const temps=temporaryTitles(),temporary=gamificationTab==="temporary";
-  const rows=temporary?temps.map(t=>`<article class="title-row" title="${esc(t.desc)}"><div><b>${t.name}</b><small>${t.desc}</small></div><span><b>${t.holders.length?t.holders.map(p=>`${esc(p.emoji)} ${esc(p.name)}`).join(", "):"Пока не присвоен"}</b>${t.valueLabel?`<small>${esc(t.valueLabel)}</small>`:""}</span></article>`).join(""):PERMANENT_RULES.map(r=>{const holders=(state.knownPlayers||[]).filter(p=>permanentAwards(p.id).some(x=>x.name===r[0]));return`<article class="title-row" title="${esc(r[1])}"><div><b>${r[0]}</b><small>${r[1]}</small></div><span><b>${holders.length?holders.map(p=>`${esc(p.emoji)} ${esc(p.name)}`).join(", "):"Ещё никто"}</b></span></article>`}).join("");
-  const help=temporary?`<b>Временные титулы пересчитываются после каждой сохранённой партии.</b><span>Форма использует последние 3–6 игр.</span><span><strong>«Гроза соперников»:</strong> в каждой из 10 последних партий результат игрока сравнивается отдельно с каждым соперником. Меньший счёт — победа, равный — половина победы. Учитываются минимум 2 соперника, с каждым нужно 5 общих игр.</span><span><strong>«Охотник на фаворитов»:</strong> учитывает последние 6 партий и победы над соперниками, чей рейтинг перед игрой был минимум на 50 Эло выше. Нужны минимум 2 такие партии.</span>`:`<b>Постоянные достижения остаются у игрока после выполнения условия.</b><span>Они не переходят к другим игрокам и рассчитываются по всей истории.</span>`;
+  const temporaryRows=temps.map(t=>`<article class="title-row" title="${esc(t.desc)}"><div><b>${t.name}</b><small>${t.desc}</small></div><span><b>${t.holders.length?t.holders.map(p=>`${esc(p.emoji)} ${esc(p.name)}`).join(", "):"Пока не присвоен"}</b>${t.valueLabel?`<small>${esc(t.valueLabel)}</small>`:""}</span></article>`).join("");
+  const permanentRows=PERMANENT_RULES.map((r,index)=>{const holders=(state.knownPlayers||[]).filter(p=>permanentAwards(p.id).some(x=>x.name===r[0])).sort((a,b)=>a.name.localeCompare(b.name,"ru")),many=holders.length>3,expanded=expandedPermanentAwards.has(r[0]),names=list=>list.map(p=>`${esc(p.emoji)} ${esc(p.name)}`).join(", ");return`<article class="title-row permanent-title-row${many?" has-many":""}${expanded?" expanded":""}"><div class="permanent-title-copy"><b>${r[0]}</b><small>${r[1]}</small></div><span class="permanent-holder-summary">${holders.length?`<b class="holder-preview holder-preview-desktop">${names(many?holders.slice(0,3):holders)}</b><b class="holder-preview holder-preview-mobile">${names(many?holders.slice(0,2):holders)}</b>`:`<b>Ещё никто</b>`}${many?`<button type="button" class="permanent-holders-toggle" data-action="toggle-permanent-holders" data-award-index="${index}" aria-expanded="${expanded}">${expanded?"Свернуть":`Все ${holders.length}`}</button>`:""}</span>${expanded?`<div class="permanent-holder-expanded">${holders.map(p=>`<span>${esc(p.emoji)} ${esc(p.name)}</span>`).join("")}</div>`:""}</article>`}).join("");
+  const rows=temporary?temporaryRows:permanentRows;
+  const help=temporary?`<b>Временные титулы пересчитываются после каждой сохранённой партии.</b><span>Форма использует последние 3–6 игр.</span><span><strong>«Гроза соперников»:</strong> в каждой из 10 последних партий результат игрока сравнивается отдельно с каждым соперником. Меньший счёт — победа, равный — половина победы. Учитываются минимум 2 соперника, с каждым нужно 5 общих игр.</span><span><strong>«Охотник на фаворитов»:</strong> учитывает последние 6 партий и победы над соперниками, чей рейтинг перед игрой был минимум на 50 Эло выше. Нужны минимум 2 такие партии.</span>`:`<b>Постоянные достижения остаются у игрока после выполнения условия.</b><span>До трёх обладателей показываются сразу. Если их больше — виден короткий список и кнопка «Все N».</span><span>Полный список раскрывается внутри награды и не растягивает остальные строки.</span>`;
   return`<details class="awards-shell" ${awardsOpen?"open":""}><summary><span><small>Зал наград</small><b>Номинации и достижения</b></span><em>Показать</em></summary><section class="awards-hub"><header><div class="award-tabs"><button class="${temporary?"active":""}" data-action="award-tab" data-tab-id="temporary">Временные</button><button class="${!temporary?"active":""}" data-action="award-tab" data-tab-id="permanent">Постоянные</button></div><div class="award-help-wrap"><button type="button" class="award-help" data-action="toggle-award-help" aria-expanded="false" aria-label="Как считаются награды">?</button><div class="award-help-popover" role="tooltip">${help}</div></div></header><div class="title-list">${rows}</div></section></details>`;
 }
 function headToHead(a,b){let aw=0,bw=0,ties=0,shared=0;for(const g of state.archive){const pa=g.players.find(x=>x.profileId===a),pb=g.players.find(x=>x.profileId===b);if(!pa||!pb)continue;shared++;const at=totalFor(pa.id,g),bt=totalFor(pb.id,g);if(at<bt)aw++;else if(bt<at)bw++;else ties++}return{shared,aw,bw,ties}}
@@ -792,6 +802,8 @@ root.addEventListener("click", async (event) => {
   if(action==="export-csv"){exportBackup("csv").then(()=>showToast("Таблица CSV скачана")).catch(()=>{});return}
   if(action==="archive-page"){olderArchiveOpen=true;archivePage=Math.max(0,Number(button.dataset.page)||0);render();setTimeout(()=>document.querySelector(".archive-older")?.scrollIntoView({behavior:"smooth",block:"start"}),30);return}
   if(action==="award-tab"){gamificationTab=button.dataset.tabId;awardsOpen=true;render();return}
+  if(action==="toggle-permanent-holders"){const rule=PERMANENT_RULES[Number(button.dataset.awardIndex)],name=rule?.[0];if(name){expandedPermanentAwards.has(name)?expandedPermanentAwards.delete(name):expandedPermanentAwards.add(name);awardsOpen=true;render()}return}
+  
   if(action==="toggle-elo-help"){const wrap=button.closest(".elo-help-wrap"),open=!wrap.classList.contains("open");document.querySelectorAll(".elo-help-wrap.open").forEach(item=>item.classList.remove("open"));wrap.classList.toggle("open",open);button.setAttribute("aria-expanded",String(open));return}
   if(action==="toggle-award-help"){const wrap=button.closest(".award-help-wrap"),open=!wrap.classList.contains("open");document.querySelectorAll(".award-help-wrap.open").forEach(item=>item.classList.remove("open"));wrap.classList.toggle("open",open);button.setAttribute("aria-expanded",String(open));return}
   if(action==="toggle-import-mode"){captureImportValues();const quick=button.dataset.mode==="quick";if(manualImport.quick!==quick){manualImport.quick=quick;manualImport.roundCount=quick?1:5;manualImport.roundIndex=0;manualImport.values={}}persistImportDraft();render();return}
@@ -852,14 +864,15 @@ function refreshDraftUi() {
   });
   const count=Object.keys(drafts).length,ready=players.length>0&&players.every(p=>Object.prototype.hasOwnProperty.call(drafts,p.id));
   const hint=document.querySelector(".score-section .section-heading .hint");if(hint)hint.textContent=`Заполнено ${count} из ${players.length}`;
-  document.querySelectorAll('button[type="submit"][form="round-form"],#round-form button[type="submit"]').forEach((button,i)=>{button.disabled=!ready||busy||!navigator.onLine||pendingWrites.length>0;button.innerHTML=`${icon("save")} ${ready?`Завершить раунд ${nextRoundNumber(state.currentGame)}`:i?`Осталось ${players.length-count}`:"Заполните все результаты"}`});const bar=document.querySelector(".mobile-round-bar span");if(bar){const n=nextRoundNumber(state.currentGame);bar.innerHTML=`<b>${count} из ${players.length}</b><small>${ready?`Раунд ${n} готов`:`Раунд ${n} · заполните результаты`}</small>`;}
+  document.querySelectorAll('button[type="submit"][form="round-form"],#round-form button[type="submit"]').forEach((button,i)=>{button.disabled=!ready||busy||roundSubmitInFlight||!navigator.onLine||pendingWrites.length>0;const label=!navigator.onLine?"Нет соединения":pendingWrites.length?"Синхронизация…":ready?`Завершить раунд ${nextRoundNumber(state.currentGame)}`:i?`Осталось ${players.length-count}`:"Заполните все результаты";button.innerHTML=`${icon("save")} ${label}`});const bar=document.querySelector(".mobile-round-bar span");if(bar){const n=nextRoundNumber(state.currentGame);bar.innerHTML=`<b>${count} из ${players.length}</b><small>${ready?`Раунд ${n} готов`:`Раунд ${n} · заполните результаты`}</small>`;}const safety=document.querySelector(".round-safety");if(safety){const box=document.createElement("div");box.innerHTML=roundSafetyMarkup();safety.replaceWith(box.firstElementChild)}
 }
 
 root.addEventListener("input",event=>{const draft=event.target.closest("[data-draft-player]");if(draft){const id=draft.dataset.draftPlayer;clearTimeout(draftSaveTimers.get(id));const note=draft.closest(".score-row")?.querySelector(".score-person small");if(note)note.textContent="продолжайте ввод…";draftSaveTimers.set(id,setTimeout(()=>{draftSaveTimers.delete(id);if(draft.isConnected)draft.dispatchEvent(new Event("change",{bubbles:true}))},1800));return}if(!event.target.closest("#import-game-form"))return;const score=event.target.closest("[data-import-name]");if(!score)return;manualImport.values[score.dataset.importName]=score.value;persistImportDraft();const profiles=manualImport.profileIds.map(id=>state.knownPlayers.find(p=>p.id===id)),totals=importPlayerTotals(profiles);for(const id of manualImport.profileIds)document.querySelectorAll(`[data-import-total="${id}"]`).forEach(out=>out.textContent=totals[id])});
 
-function updateSyncBadge(){const el=document.querySelector(".sync-badge");if(!el)return;el.className=`sync-badge ${!navigator.onLine?"offline":pendingWrites.length?"pending":"saved"}`;el.textContent=!navigator.onLine?`Нет соединения · не отправлено ${pendingWrites.length}`:pendingWrites.length?`Не отправлено: ${pendingWrites.length}`:"Всё сохранено"}
-function queueDraft(type,playerId,score){pendingWrites=pendingWrites.filter(x=>x.playerId!==playerId);pendingWrites.push({type,playerId,score});localStorage.setItem(pendingKey,JSON.stringify(pendingWrites));if(type==="clear")delete state.currentGame.draftScores[playerId];else state.currentGame.draftScores[playerId]=score;refreshDraftUi();updateSyncBadge()}
-async function flushPending(){if(!cloudMode||!navigator.onLine||!pendingWrites.length)return;for(const op of [...pendingWrites]){try{op.type==="clear"?await api.clearDraftScore(op.playerId):await api.setDraftScore(op.playerId,op.score);pendingWrites=pendingWrites.filter(x=>x!==op);localStorage.setItem(pendingKey,JSON.stringify(pendingWrites))}catch{break}}updateSyncBadge();if(!pendingWrites.length)syncStateNow()}
+function updateSyncBadge(){const current=document.querySelector(".sync-badge");if(!current)return;const box=document.createElement("div");box.innerHTML=syncBadgeMarkup();current.replaceWith(box.firstElementChild)}
+function queueDraft(type,playerId,score){pendingWrites=pendingWrites.filter(x=>x.playerId!==playerId);pendingWrites.push({type,playerId,score,queuedAt:new Date().toISOString()});localStorage.setItem(pendingKey,JSON.stringify(pendingWrites));if(type==="clear")delete state.currentGame.draftScores[playerId];else state.currentGame.draftScores[playerId]=score;saveActiveSnapshot();refreshDraftUi();updateSyncBadge()}
+async function flushPending(){if(flushInFlight)return flushInFlight;if(!cloudMode||!navigator.onLine||!pendingWrites.length)return;flushInFlight=(async()=>{for(const op of [...pendingWrites]){try{op.type==="clear"?await api.clearDraftScore(op.playerId):await api.setDraftScore(op.playerId,op.score);pendingWrites=pendingWrites.filter(x=>x!==op);localStorage.setItem(pendingKey,JSON.stringify(pendingWrites))}catch{syncIssue=true;break}}updateSyncBadge();saveActiveSnapshot();if(!pendingWrites.length){markSynchronized();await syncStateNow(true)}})().finally(()=>{flushInFlight=null;refreshDraftUi()});return flushInFlight}
+
 root.addEventListener("change", async event => {const opponent=event.target.closest("#opponent-select");if(opponent){selectedOpponentId=opponent.value;const player=(state.knownPlayers||[]).find(item=>item.id===selectedProfileId),rival=(state.knownPlayers||[]).find(item=>item.id===selectedOpponentId),current=opponent.closest(".premium-h2h")?.querySelector(".duel-card.enhanced");if(player&&rival&&current){const holder=document.createElement("div");holder.innerHTML=profileHeadToHead(player,rival,headToHead(player.id,rival.id));if(holder.firstElementChild)current.replaceWith(holder.firstElementChild)}return}const input=event.target.closest("[data-draft-player]");if(!input)return;clearTimeout(draftSaveTimers.get(input.dataset.draftPlayer));draftSaveTimers.delete(input.dataset.draftPlayer);const raw=input.value.trim(),score=Number(raw),type=raw===""?"clear":"set";if(raw!==""&&(!Number.isInteger(score)||score<0||score>999)){showToast("Введите целое число от 0 до 999","error");return}if(cloudMode&&!navigator.onLine){queueDraft(type,input.dataset.draftPlayer,score);showToast("Нет соединения — сохранили на устройстве");return}try{input.disabled=true;updateSyncBadge();const drafts=type==="clear"?await api.clearDraftScore(input.dataset.draftPlayer):await api.setDraftScore(input.dataset.draftPlayer,score);state.currentGame.draftScores=drafts;lastStateHash=JSON.stringify(state);refreshDraftUi();updateSyncBadge();showToast(type==="clear"?"Результат очищен":"Результат сохранён")}catch(e){if(cloudMode){queueDraft(type,input.dataset.draftPlayer,score);showToast("Не отправлено — повторим автоматически","error")}else{input.disabled=false;showToast(e.message||"Не удалось сохранить","error")}}});
 
 root.addEventListener("submit", (event) => {
@@ -871,7 +884,7 @@ root.addEventListener("submit", (event) => {
   if(event.target.id==="import-game-form"){captureImportValues();const rounds=[];for(let i=0;i<manualImport.roundCount;i++){const row={};let any=false,all=true;for(const id of manualImport.profileIds){const v=manualImport.values[`r${i}-${id}`]??"";if(v!==""){any=true;row[id]=Number(v)}else all=false}if(any&&!all){showToast(`Заполните весь раунд ${i+1}`,"error");manualImport.roundIndex=i;render();return}if(any)rounds.push(row)}if(!rounds.length){showToast(manualImport.quick?"Заполните итоги":"Добавьте хотя бы один раунд","error");return}const mode=manualImport.quick?"totals":"rounds";mutate(async()=>{const result=await api.importGame(`${manualImport.date}T12:00:00`,manualImport.profileIds,rounds,mode);clearImportDraft();return result},"Прошлая партия добавлена");return}
   if (event.target.id === "player-form") { const name = new FormData(event.target).get("name")?.trim(); if (name) mutate(() => api.addPlayer(name, selectedEmoji), `${name} за столом`); }
   if(event.target.id==="edit-profile-form"){const profile=(state.knownPlayers||[]).find(x=>x.id===editingProfileId),name=new FormData(event.target).get("name")?.trim();if(!profile||!name)return;mutate(()=>api.updateProfile(profile.id,name,selectedEmoji,selectedAccent,selectedPattern,selectedAward),"Оформление профиля сохранено");}
-  if(event.target.id==="round-form")mutate(async()=>{const key=`korova-round-token-${roomCode}-${state.currentGame.id}`;let token=localStorage.getItem(key);if(!token){token=crypto.randomUUID();localStorage.setItem(key,token)}const result=await api.finalizeRound(token);localStorage.removeItem(key);return result},"Раунд завершён");
+  if(event.target.id==="round-form"){if(roundSubmitInFlight||busy){showToast("Раунд уже сохраняется");return}if(!navigator.onLine){showToast("Подключитесь к интернету — черновик уже сохранён на устройстве","error");return}if(pendingWrites.length){showToast("Подождите, пока черновики синхронизируются","error");flushPending();return}roundSubmitInFlight=true;const gameId=state.currentGame.id,key=`korova-round-token-${roomCode}-${gameId}`;let token=localStorage.getItem(key);if(!token){token=crypto.randomUUID();localStorage.setItem(key,token)}mutate(async()=>{const result=await api.finalizeRound(token);localStorage.removeItem(key);return result},"Раунд завершён").finally(()=>{roundSubmitInFlight=false;refreshDraftUi()});return}
   if (event.target.id === "edit-round-form") { const form=new FormData(event.target),scores={};for(const player of state.currentGame.players){const raw=form.get(player.id);if(raw===""||raw==null||Number(raw)<0||!Number.isInteger(Number(raw))){showToast(`Укажите очки для ${player.name}`,"error");return}scores[player.id]=Number(raw)}mutate(()=>api.updateRound(editingRoundId,scores),"Результат раунда исправлен"); }
 });
 
@@ -879,7 +892,9 @@ root.addEventListener("keydown",event=>{const input=event.target.closest(".impor
 
 window.addEventListener("beforeinstallprompt", event => { event.preventDefault(); deferredInstallPrompt = event; });
 window.addEventListener("appinstalled", () => showToast("Коровосчёт установлен"));
-if ("serviceWorker" in navigator && location.protocol.startsWith("http")) window.addEventListener("load", () => navigator.serviceWorker.register("./service-worker.js").catch(() => {}));
+function showAppUpdate(registration){if(document.querySelector(".app-update"))return;const bar=document.createElement("div");bar.className="app-update";bar.innerHTML=`<span><b>Доступно обновление</b><small>Оно установится после вашего подтверждения.</small></span><button type="button">Обновить</button>`;bar.querySelector("button").addEventListener("click",()=>{bar.querySelector("button").disabled=true;bar.querySelector("button").textContent="Обновляем…";registration.waiting?.postMessage({type:"SKIP_WAITING"})});document.body.append(bar)}
+function registerServiceWorker(){navigator.serviceWorker.register("./service-worker.js").then(registration=>{if(registration.waiting)showAppUpdate(registration);registration.addEventListener("updatefound",()=>{const worker=registration.installing;worker?.addEventListener("statechange",()=>{if(worker.state==="installed"&&navigator.serviceWorker.controller)showAppUpdate(registration)})})}).catch(()=>{});navigator.serviceWorker.addEventListener("controllerchange",()=>{if(reloadingForUpdate)return;reloadingForUpdate=true;location.reload()})}
+if("serviceWorker" in navigator&&location.protocol.startsWith("http"))window.addEventListener("load",registerServiceWorker);
 
 document.addEventListener("keydown", (event) => { if (event.key === "Escape" && modal) { if(modal==="import-rounds"){captureImportValues();if(hasImportValues()&&!confirm("Закрыть ввод? Заполненные результаты будут удалены."))return;clearImportDraft()} modal = null; render(); } });
 window.addEventListener("storage", async () => { if (!cloudMode) { state = await api.getState(); render(); } });
@@ -894,25 +909,28 @@ function scheduleSync(delay = 5000) {
   syncTimer = setTimeout(syncStateNow, delay);
 }
 
-async function syncStateNow() {
-  if (!cloudMode || document.hidden) return;
+async function syncStateNow(force=false) {
+  if (!cloudMode || (document.hidden&&!force)) return;
+  if(pendingWrites.length&&!force){await flushPending();scheduleSync(5000);return}
   if (syncInFlight || busy || modal || document.activeElement?.matches("input")) {
     scheduleSync(5000);flushPending();
     return;
   }
   syncInFlight = true;
   try {
-    const next=mergeLive(await getLive());
+    const previous=state, next=mergeLive(await getLive());
     const hash=JSON.stringify({...next,archive:[]});
     if (hash !== lastStateHash) {
       if(TV_MODE&&state?.currentGame?.id===next.currentGame?.id&&(next.currentGame?.rounds?.length||0)>(state.currentGame?.rounds?.length||0)){tvEventUntil=Date.now()+5000;clearTimeout(tvEventTimer);tvEventTimer=setTimeout(()=>render(),5100)}
       if(TV_MODE&&state?.currentGame?.id&&next.currentGame?.id!==state.currentGame.id){const previous=structuredClone(state.currentGame),previousId=previous.id;let finished=(next.archive||[]).find(g=>g.id===previousId)||null;if(cloudMode)try{finished=await api.gameDetail(previousId)||finished}catch{}startTvCelebration(finished||previous)}
-      state = next;
-      lastStateHash = hash;
-      render();
-    }
-    syncRetryDelay = 5000;
+      const sameGame=previous?.currentGame?.id===next.currentGame?.id,oldDrafts=previous?.currentGame?.draftScores||{},newDrafts=next.currentGame?.draftScores||{};
+      const remoteChanged=sameGame?(next.currentGame.players||[]).filter(player=>String(oldDrafts[player.id]??"")!==String(newDrafts[player.id]??"")).map(player=>player.name):[];
+      state=next;lastStateHash=hash;markSynchronized();render();
+      if(remoteChanged.length)showToast(`С другого устройства обновлено: ${remoteChanged.slice(0,3).join(", ")}${remoteChanged.length>3?"…":""}`);
+    } else markSynchronized();
+    syncRetryDelay=5000;
   } catch {
+    syncIssue=true;saveActiveSnapshot();updateSyncBadge();
     syncRetryDelay = Math.min(syncRetryDelay * 2, 30000);
   } finally {
     syncInFlight = false;
@@ -925,20 +943,23 @@ document.addEventListener("visibilitychange", () => {
   else {syncStateNow();scheduleInsightAuto()}
 });
 window.addEventListener("focus", () => { if (cloudMode && !document.hidden) syncStateNow(); });
-window.addEventListener("online", () => { syncRetryDelay=5000;updateSyncBadge();flushPending(); });
-window.addEventListener("offline",()=>{updateSyncBadge();refreshDraftUi()});
+window.addEventListener("online",()=>{syncRetryDelay=5000;syncIssue=false;updateSyncBadge();flushPending()});
+window.addEventListener("offline",()=>{syncIssue=true;saveActiveSnapshot();updateSyncBadge();refreshDraftUi()});
 
 async function init() {
   render();
   try {
     await api.ensure();
     state=mergeLive(await getLive());
-    lastStateHash=JSON.stringify({...state,archive:[]});
+    lastStateHash=JSON.stringify({...state,archive:[]});markSynchronized();
     render();
     scheduleSync(5000);
     if(cloudMode)setTimeout(()=>{if(tab==="game"||TV_MODE)ensureHistory().catch(()=>{})},TV_MODE?0:2500);
   } catch (error) {
-    root.innerHTML = `<main class="fatal"><div class="logo-card mini"><b>006</b></div><h1>Не удалось открыть комнату</h1><p>${esc(error.message)}</p><button class="button primary" onclick="location.reload()">Попробовать снова</button></main>`;
+    const snapshot=loadActiveSnapshot();
+    if(snapshot){state=snapshot;lastStateHash=JSON.stringify({...state,archive:[]});syncIssue=true;render();showToast("Восстановлена сохранённая копия партии. Подключимся к серверу автоматически.","error");scheduleSync(5000)}
+    else root.innerHTML=`<main class="fatal"><div class="logo-card mini"><b>006</b></div><h1>Не удалось открыть комнату</h1><p>${esc(error.message)}</p><button class="button primary" onclick="location.reload()">Попробовать снова</button></main>`;
   }
 }
+window.addEventListener("beforeunload",saveActiveSnapshot);
 init();
