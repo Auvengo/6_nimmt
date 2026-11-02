@@ -14,6 +14,7 @@ const PROFILE_PALETTES=[
 ];
 const PROFILE_PATTERNS=[{id:"none",name:"Без узора"},{id:"dots",name:"Крапинки"},{id:"stripes",name:"Полосы"},{id:"diamonds",name:"Ромбики"},{id:"waves",name:"Волны"}];
 const DEFAULT_PROFILE_PATTERNS=PROFILE_PATTERNS.filter(x=>x.id!=="none");
+const APP_VERSION = "7.0.1";
 const LIMIT = 10;
 const WIN_LINE = 66;
 const root = document.querySelector("#app");
@@ -57,7 +58,7 @@ const pendingKey = `korova-pending-${roomCode}`;
 const snapshotKey = `korova-active-snapshot-${roomCode}`;
 let pendingWrites = JSON.parse(localStorage.getItem(pendingKey) || "[]");
 let flushInFlight = null, roundSubmitInFlight = false;
-let lastSyncAt = null, syncIssue = false, reloadingForUpdate = false;
+let lastSyncAt = null, syncIssue = false, reloadingForUpdate = false, swRegistration = null;
 const adminKey=`korova-admin-${roomCode}`;let adminSession=JSON.parse(localStorage.getItem(adminKey)||"null");
 const importDraftKey=`korova-import-draft-${roomCode}`;
 function isAdmin(){return !cloudMode||!!(adminSession?.token&&new Date(adminSession.expiresAt)>new Date())}
@@ -275,7 +276,7 @@ async function openArchiveGame(id){selectedArchiveId=id;archiveDetailTab="summar
 async function loadArchivePage(reset=false){if(archiveFeed.loading||(!reset&&archiveFeed.loaded&&!archiveFeed.hasMore))return;if(reset)archiveFeed={items:[],nextCursor:null,hasMore:false,loading:true,loaded:false,total:null,summary:null};else archiveFeed.loading=true;render();try{const page=await api.archivePage(reset?null:archiveFeed.nextCursor,12,archiveFilters),seen=new Set(archiveFeed.items.map(x=>x.id));archiveFeed.items=[...archiveFeed.items,...(page.items||[]).filter(x=>!seen.has(x.id))];archiveFeed.nextCursor=page.nextCursor||null;archiveFeed.hasMore=!!page.hasMore;archiveFeed.total=Number(page.total??archiveFeed.items.length);archiveFeed.summary=page.summary||null;archiveFeed.loaded=true}catch(e){showToast(e.message||"Не удалось загрузить архив","error")}finally{archiveFeed.loading=false;render()}}
 
 function downloadText(name,text,type){const blob=new Blob([text],{type}),url=URL.createObjectURL(blob),link=document.createElement("a");link.href=url;link.download=name;link.click();setTimeout(()=>URL.revokeObjectURL(url),1000)}
-async function exportBackup(format){await ensureHistory();const stamp=new Date().toISOString().slice(0,10);if(format==="json"){downloadText(`korova-${roomCode}-${stamp}.json`,JSON.stringify({version:"7.0.0",exportedAt:new Date().toISOString(),room:state.room,knownPlayers:state.knownPlayers,currentGame:state.currentGame,archive:state.archive},null,2),"application/json");return}const rows=[["Дата","Игрок","Место","Очки","Раунды","Игроков"]];for(const g of state.archive)rankingFor(g).forEach((x,i)=>rows.push([(g.finishedAt||g.startedAt||"").slice(0,10),x.name,i+1,x.total,g.rounds.length,g.players.length]));const csv="\ufeff"+rows.map(r=>r.map(v=>`"${String(v).replaceAll('"','""')}"`).join(";")).join("\n");downloadText(`korova-${roomCode}-${stamp}.csv`,csv,"text/csv;charset=utf-8")}
+async function exportBackup(format){await ensureHistory();const stamp=new Date().toISOString().slice(0,10);if(format==="json"){downloadText(`korova-${roomCode}-${stamp}.json`,JSON.stringify({version:"7.0.1",exportedAt:new Date().toISOString(),room:state.room,knownPlayers:state.knownPlayers,currentGame:state.currentGame,archive:state.archive},null,2),"application/json");return}const rows=[["Дата","Игрок","Место","Очки","Раунды","Игроков"]];for(const g of state.archive)rankingFor(g).forEach((x,i)=>rows.push([(g.finishedAt||g.startedAt||"").slice(0,10),x.name,i+1,x.total,g.rounds.length,g.players.length]));const csv="\ufeff"+rows.map(r=>r.map(v=>`"${String(v).replaceAll('"','""')}"`).join(";")).join("\n");downloadText(`korova-${roomCode}-${stamp}.csv`,csv,"text/csv;charset=utf-8")}
 
 function esc(value = "") {
   return String(value).replace(/[&<>'"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" }[c]));
@@ -427,6 +428,7 @@ function render() {
         </a>
         <div class="room-tools"><button class="tv-open" data-action="open-tv" title="Большое табло">📺 <span>Табло</span></button><button class="admin-pill ${isAdmin()?"active":""}" data-action="open-admin">${isAdmin()?"🔓 Организатор":"🔒 Войти"}</button>${syncBadgeMarkup()}
           <span class="room-label">Комната <b>${roomCode}</b></span>
+          <button class="update-check" data-action="check-app-update" title="Проверить обновление">↻ <span>Обновить</span></button>
           <button class="icon-btn" data-action="open-share" title="Поделиться и установить" aria-label="Поделиться и установить">${icon("share")}</button>
         </div>
       </header>
@@ -442,7 +444,7 @@ function render() {
       <main>
         ${tab === "game" ? renderGame(game, ranks, leader, danger) : tab === "archive" ? renderArchive() : renderStatistics()}
       </main>
-      <footer><span>🐮</span> Меньше коров — ближе победа</footer>
+      <footer><span>🐮</span> Меньше коров — ближе победа <small>v${APP_VERSION}</small></footer>
     </div>
     ${renderModal()}
   `;
@@ -795,6 +797,7 @@ root.addEventListener("click", async (event) => {
   if (button.dataset.modal != null) return;
   if(button.dataset.tab){tab=button.dataset.tab;render();scrollTo({top:0,behavior:"smooth"});if(tab==="archive"&&!archiveFeed.loaded)loadArchivePage(true);if(tab==="stats"&&!historyLoaded)ensureHistory();return}
   const action = button.dataset.action;
+  if(action==="check-app-update"){checkForAppUpdate(true);return}
   if(action==="open-admin"){modal="admin";render();return}
   if(action==="admin-logout"){adminSession=null;localStorage.removeItem(adminKey);modal=null;render();return}
   if(action==="run-integrity"){await ensureHistory();integrityReport=checkIntegrity();modal="integrity";render();return}
@@ -917,8 +920,9 @@ root.addEventListener("keydown",event=>{const input=event.target.closest(".impor
 
 window.addEventListener("beforeinstallprompt", event => { event.preventDefault(); deferredInstallPrompt = event; });
 window.addEventListener("appinstalled", () => showToast("Коровосчёт установлен"));
-function showAppUpdate(registration){if(document.querySelector(".app-update"))return;const bar=document.createElement("div");bar.className="app-update";bar.innerHTML=`<span><b>Доступно обновление</b><small>Оно установится после вашего подтверждения.</small></span><button type="button">Обновить</button>`;bar.querySelector("button").addEventListener("click",()=>{bar.querySelector("button").disabled=true;bar.querySelector("button").textContent="Обновляем…";registration.waiting?.postMessage({type:"SKIP_WAITING"})});document.body.append(bar)}
-function registerServiceWorker(){navigator.serviceWorker.register("./service-worker.js").then(registration=>{if(registration.waiting)showAppUpdate(registration);registration.addEventListener("updatefound",()=>{const worker=registration.installing;worker?.addEventListener("statechange",()=>{if(worker.state==="installed"&&navigator.serviceWorker.controller)showAppUpdate(registration)})})}).catch(()=>{});navigator.serviceWorker.addEventListener("controllerchange",()=>{if(reloadingForUpdate)return;reloadingForUpdate=true;location.reload()})}
+function showAppUpdate(registration){if(document.querySelector(".app-update"))return;const bar=document.createElement("div");bar.className="app-update";bar.innerHTML=`<span><b>Доступно обновление</b><small>Новая версия загружена и готова к установке.</small></span><button type="button">Обновить сейчас</button>`;bar.querySelector("button").addEventListener("click",()=>{const button=bar.querySelector("button");button.disabled=true;button.textContent="Обновляем…";registration.waiting?.postMessage({type:"SKIP_WAITING"})});document.body.append(bar)}
+async function checkForAppUpdate(manual=false){if(!("serviceWorker" in navigator)){if(manual)showToast("Обновление через браузер недоступно","error");return}try{let registration=swRegistration||await navigator.serviceWorker.getRegistration("./");if(!registration)registration=await navigator.serviceWorker.register("./service-worker.js",{updateViaCache:"none"});swRegistration=registration;await registration.update();if(registration.waiting){showAppUpdate(registration);return}const version=await fetch(`./version.json?t=${Date.now()}`,{cache:"no-store"}).then(r=>r.ok?r.json():null).catch(()=>null);if(version?.version&&version.version!==APP_VERSION){await registration.update();if(registration.waiting)showAppUpdate(registration);else if(manual)showToast(`Опубликована версия ${version.version}. Перезагрузите страницу.`,"error");return}if(manual)showToast(`Установлена последняя версия ${APP_VERSION}`)}catch(error){if(manual)showToast("Не удалось проверить обновление. Попробуйте ещё раз.","error")}}
+function registerServiceWorker(){navigator.serviceWorker.register("./service-worker.js",{updateViaCache:"none"}).then(async registration=>{swRegistration=registration;if(registration.waiting)showAppUpdate(registration);registration.addEventListener("updatefound",()=>{const worker=registration.installing;worker?.addEventListener("statechange",()=>{if(worker.state==="installed"&&navigator.serviceWorker.controller)showAppUpdate(registration)})});await registration.update().catch(()=>{});setInterval(()=>checkForAppUpdate(false),30*60*1000)}).catch(()=>{});navigator.serviceWorker.addEventListener("controllerchange",()=>{if(reloadingForUpdate)return;reloadingForUpdate=true;location.reload()})}
 if("serviceWorker" in navigator&&location.protocol.startsWith("http"))window.addEventListener("load",registerServiceWorker);
 
 document.addEventListener("keydown", (event) => { if (event.key === "Escape" && modal) { if(modal==="import-rounds"){captureImportValues();if(hasImportValues()&&!confirm("Закрыть ввод? Заполненные результаты будут удалены."))return;clearImportDraft()} modal = null; render(); } });
