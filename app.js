@@ -14,7 +14,7 @@ const PROFILE_PALETTES=[
 ];
 const PROFILE_PATTERNS=[{id:"none",name:"Без узора"},{id:"dots",name:"Крапинки"},{id:"stripes",name:"Полосы"},{id:"diamonds",name:"Ромбики"},{id:"waves",name:"Волны"}];
 const DEFAULT_PROFILE_PATTERNS=PROFILE_PATTERNS.filter(x=>x.id!=="none");
-const APP_VERSION = "7.0.5";
+const APP_VERSION = "7.0.6";
 const LIMIT = 10;
 const WIN_LINE = 66;
 const root = document.querySelector("#app");
@@ -47,7 +47,7 @@ let olderArchiveOpen = false, archivePage = 0, selectedArchiveId = null, archive
 let archiveFeed={items:[],nextCursor:null,hasMore:false,loading:false,loaded:false,total:null,summary:null},archiveObserver=null;
 let archiveFilters={query:"",from:"",to:"",participant:"",winner:"",playerCount:"",mode:""},archiveFiltersOpen=false;
 const archiveDetails=new Map();
-let historyLoaded=!cloudMode,historyLoading=null,statsMemo={key:null,value:null};
+let historyLoaded=!cloudMode,historyLoading=null,historyError=null,historyProgress="",statsMemo={key:null,value:null};
 const draftSaveTimers = new Map();
 let insightIndex = 0, insightTouch = null;
 let insightTimer = null, insightPausedUntil = 0, insightContentTimer = null;
@@ -99,21 +99,42 @@ const api = cloudMode ? createCloudApi() : createLocalApi();
 function nullIfEmpty(value){return value||null}
 
 function createCloudApi() {
-  async function rpc(name, payload = {}) {
-    const response = await fetch(`${cfg.SUPABASE_URL}/rest/v1/rpc/${name}`, {
-      method: "POST",
-      headers: {
-        apikey: cfg.SUPABASE_ANON_KEY,
-        Authorization: `Bearer ${cfg.SUPABASE_ANON_KEY}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(payload)
-    });
-    if (!response.ok) {
-      const data = await response.json().catch(() => ({}));
-      throw new Error(data.message || data.hint || `Ошибка сервера: ${response.status}`);
+  async function rpc(name, payload = {}, timeoutMs = 20000) {
+    const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),timeoutMs);
+    try{
+      const response = await fetch(`${cfg.SUPABASE_URL}/rest/v1/rpc/${name}`, {
+        method: "POST",
+        headers: {
+          apikey: cfg.SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${cfg.SUPABASE_ANON_KEY}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(payload),
+        signal:controller.signal
+      });
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.message || data.hint || `Ошибка сервера: ${response.status}`);
+      }
+      return response.status === 204 ? null : response.json();
+    }catch(error){
+      if(error?.name==="AbortError")throw new Error("Сервер слишком долго отвечает");
+      throw error;
+    }finally{clearTimeout(timer)}
+  }
+  async function pagedHistoryFallback(){
+    let cursor=null,hasMore=true,summaries=[],guard=0;
+    while(hasMore&&guard++<20){
+      const page=await rpc("korova_archive_search_v3",{p_code:roomCode,p_cursor:cursor,p_limit:50,p_query:null,p_from:null,p_to:null,p_participant:null,p_winner:null,p_player_count:null,p_score_mode:null});
+      summaries.push(...(page?.items||[]));cursor=page?.nextCursor||null;hasMore=!!page?.hasMore&&!!cursor;
+      historyProgress=`Найдено ${summaries.length} партий…`;if(tab==="stats")render();
     }
-    return response.status === 204 ? null : response.json();
+    const games=[];
+    for(let i=0;i<summaries.length;i+=8){
+      const chunk=await Promise.all(summaries.slice(i,i+8).map(item=>rpc("korova_game_detail",{p_code:roomCode,p_game_id:item.id})));
+      games.push(...chunk.filter(Boolean));historyProgress=`Загружено ${games.length} из ${summaries.length} партий`;if(tab==="stats")render();
+    }
+    return games.sort((a,b)=>new Date(b.finishedAt||b.startedAt)-new Date(a.finishedAt||a.startedAt));
   }
   return {
     adminLogin: (pin) => rpc("korova_admin_login",{p_code:roomCode,p_pin:pin}),
@@ -123,7 +144,7 @@ function createCloudApi() {
     ensure: () => rpc("korova_ensure_room", { p_code: roomCode }),
     getState: async () => { const s=await rpc("korova_get_state",{p_code:roomCode});s.currentGame.draftScores=await rpc("korova_get_draft_scores",{p_code:roomCode});return s; },
     getLiveState: () => rpc("korova_live_state",{p_code:roomCode}),
-    getHistory: async()=>{try{return await rpc("korova_history_data",{p_code:roomCode})}catch{return (await rpc("korova_get_state",{p_code:roomCode})).archive||[]}},
+    getHistory: async()=>{try{const data=await rpc("korova_history_data",{p_code:roomCode},12000);if(Array.isArray(data))return data;if(Array.isArray(data?.archive))return data.archive}catch{}try{const legacy=await rpc("korova_get_state",{p_code:roomCode},12000);if(Array.isArray(legacy?.archive))return legacy.archive}catch{}return pagedHistoryFallback()},
     archivePage:(cursor=null,limit=12,filters={})=>rpc("korova_archive_search_v3",{p_code:roomCode,p_cursor:cursor,p_limit:limit,p_query:filters.query||null,p_from:filters.from||null,p_to:filters.to||null,p_participant:nullIfEmpty(filters.participant),p_winner:nullIfEmpty(filters.winner),p_player_count:filters.playerCount?Number(filters.playerCount):null,p_score_mode:filters.mode||null}),
     gameDetail: gameId=>rpc("korova_game_detail",{p_code:roomCode,p_game_id:gameId}),
     addPlayer: (name,emoji)=>rpc("korova_add_player",{p_code:roomCode,p_name:name,p_emoji:emoji}),
@@ -270,13 +291,13 @@ function syncBadgeMarkup(){const time=lastSyncAt?.toLocaleTimeString("ru-RU",{ho
 function roundSafetyMarkup(){const online=navigator.onLine,pending=pendingWrites.length;return`<div class="round-safety ${online?pending?"pending":"saved":"offline"}"><span><i></i>${online?pending?"Отправляем черновик":"Черновик сохранён":"Черновик сохранён на устройстве"}</span><span>Повторное нажатие защищено</span></div>`}
 function mergeLive(next){const hasArchive=Array.isArray(next?.archive);if(hasArchive){historyLoaded=true;statsMemo={key:null,value:null}}const archive=hasArchive?next.archive:(historyLoaded?(state?.archive||[]):(state?.archive||[]));return{...next,archive,archiveCount:Number(next.archiveCount??(hasArchive?next.archive.length:null)??state?.archiveCount??archive.length)}}
 async function getLive(){if(!cloudMode)return api.getLiveState();try{return await api.getLiveState()}catch{return api.getState()}}
-async function ensureHistory(force=false){if(!cloudMode){historyLoaded=true;return state.archive}if(historyLoaded&&!force)return state.archive;if(historyLoading)return historyLoading;historyLoading=api.getHistory().then(rows=>{state.archive=Array.isArray(rows)?rows:[];state.archiveCount=state.archive.length;historyLoaded=true;statsMemo={key:null,value:null};lastStateHash=JSON.stringify({...state,archive:[]});render();return state.archive}).catch(e=>{showToast("Не удалось загрузить историю","error");throw e}).finally(()=>historyLoading=null);return historyLoading}
-function invalidateHistory(){historyLoaded=!cloudMode;statsMemo={key:null,value:null};archiveFeed={items:[],nextCursor:null,hasMore:false,loading:false,loaded:false,total:null,summary:null};archiveDetails.clear()}
+async function ensureHistory(force=false){if(!cloudMode){historyLoaded=true;return state.archive}if(historyLoaded&&!force)return state.archive;if(historyLoading)return historyLoading;historyError=null;historyProgress="Подключаемся к истории…";if(tab==="stats")render();historyLoading=api.getHistory().then(rows=>{state.archive=Array.isArray(rows)?rows:[];state.archiveCount=state.archive.length;historyLoaded=true;historyError=null;historyProgress="";statsMemo={key:null,value:null};lastStateHash=JSON.stringify({...state,archive:[]});render();return state.archive}).catch(e=>{historyError=e?.message||"Не удалось загрузить историю";historyProgress="";render();showToast("Не удалось загрузить статистику","error");throw e}).finally(()=>historyLoading=null);return historyLoading}
+function invalidateHistory(){historyLoaded=!cloudMode;historyError=null;historyProgress="";statsMemo={key:null,value:null};archiveFeed={items:[],nextCursor:null,hasMore:false,loading:false,loaded:false,total:null,summary:null};archiveDetails.clear()}
 async function openArchiveGame(id){selectedArchiveId=id;archiveDetailTab="summary";olderArchiveOpen=true;const existing=archiveDetails.get(id)||(!cloudMode?(state.archive||[]).find(g=>g.id===id&&g.players&&g.rounds):null);if(existing){archiveDetails.set(id,existing);modal="archive-game";render();return}modal="archive-loading";render();try{const game=await api.gameDetail(id);if(!game)throw new Error("Партия не найдена");archiveDetails.set(id,game);modal="archive-game";render()}catch(e){modal=null;render();showToast(e.message||"Не удалось открыть партию","error")}}
 async function loadArchivePage(reset=false){if(archiveFeed.loading||(!reset&&archiveFeed.loaded&&!archiveFeed.hasMore))return;if(reset)archiveFeed={items:[],nextCursor:null,hasMore:false,loading:true,loaded:false,total:null,summary:null};else archiveFeed.loading=true;render();try{const page=await api.archivePage(reset?null:archiveFeed.nextCursor,12,archiveFilters),seen=new Set(archiveFeed.items.map(x=>x.id));archiveFeed.items=[...archiveFeed.items,...(page.items||[]).filter(x=>!seen.has(x.id))];archiveFeed.nextCursor=page.nextCursor||null;archiveFeed.hasMore=!!page.hasMore;archiveFeed.total=Number(page.total??archiveFeed.items.length);archiveFeed.summary=page.summary||null;archiveFeed.loaded=true}catch(e){showToast(e.message||"Не удалось загрузить архив","error")}finally{archiveFeed.loading=false;render()}}
 
 function downloadText(name,text,type){const blob=new Blob([text],{type}),url=URL.createObjectURL(blob),link=document.createElement("a");link.href=url;link.download=name;link.click();setTimeout(()=>URL.revokeObjectURL(url),1000)}
-async function exportBackup(format){await ensureHistory();const stamp=new Date().toISOString().slice(0,10);if(format==="json"){downloadText(`korova-${roomCode}-${stamp}.json`,JSON.stringify({version:"7.0.5",exportedAt:new Date().toISOString(),room:state.room,knownPlayers:state.knownPlayers,currentGame:state.currentGame,archive:state.archive},null,2),"application/json");return}const rows=[["Дата","Игрок","Место","Очки","Раунды","Игроков"]];for(const g of state.archive)rankingFor(g).forEach((x,i)=>rows.push([(g.finishedAt||g.startedAt||"").slice(0,10),x.name,i+1,x.total,g.rounds.length,g.players.length]));const csv="\ufeff"+rows.map(r=>r.map(v=>`"${String(v).replaceAll('"','""')}"`).join(";")).join("\n");downloadText(`korova-${roomCode}-${stamp}.csv`,csv,"text/csv;charset=utf-8")}
+async function exportBackup(format){await ensureHistory();const stamp=new Date().toISOString().slice(0,10);if(format==="json"){downloadText(`korova-${roomCode}-${stamp}.json`,JSON.stringify({version:"7.0.6",exportedAt:new Date().toISOString(),room:state.room,knownPlayers:state.knownPlayers,currentGame:state.currentGame,archive:state.archive},null,2),"application/json");return}const rows=[["Дата","Игрок","Место","Очки","Раунды","Игроков"]];for(const g of state.archive)rankingFor(g).forEach((x,i)=>rows.push([(g.finishedAt||g.startedAt||"").slice(0,10),x.name,i+1,x.total,g.rounds.length,g.players.length]));const csv="\ufeff"+rows.map(r=>r.map(v=>`"${String(v).replaceAll('"','""')}"`).join(";")).join("\n");downloadText(`korova-${roomCode}-${stamp}.csv`,csv,"text/csv;charset=utf-8")}
 
 function esc(value = "") {
   return String(value).replace(/[&<>'"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" }[c]));
@@ -592,8 +613,21 @@ function archiveSummaryMarkup(){const x=archiveFeed.summary;if(!x||!x.games)retu
 function renderPagedArchive(){setTimeout(setupArchiveAutoLoad,0);const loading=!archiveFeed.loaded;const monthName=d=>new Date(d).toLocaleDateString("ru-RU",{month:"long",year:"numeric"});let lastMonth="";const rows=archiveFeed.items.map(g=>{const month=monthName(g.finishedAt||g.startedAt),heading=month!==lastMonth?(lastMonth=month,`<div class="archive-month server-month">${month}</div>`):"",mode=g.scoreMode||"rounds";return`${heading}<button class="archive-server-row" data-action="open-archive-game" data-id="${g.id}"><span class="compact-date">${formatDate(g.finishedAt||g.startedAt)}</span><span ${profileAttrs(g.winner,"compact-winner profile-compact")}>${profileAvatar(g.winner)} <b>${esc(g.winner?.name||"—")}</b></span><small>${g.playerCount} ${plural(g.playerCount,"игрок","игрока","игроков")} · <em class="score-mode-badge ${mode}">${mode==="totals"?"Только итоги":`${g.roundCount} ${plural(g.roundCount,"раунд","раунда","раундов")}`}</em></small><strong>${g.winner?.total??"—"} очк.</strong><i>›</i></button>`}).join("");return`<section class="archive-page"><div class="archive-title archive-title-actions"><div><span class="eyebrow">Архив 2.0</span><h1>Прошлые игры</h1><p>Поиск, фильтры и безопасное управление историей.</p></div><button class="button secondary" data-action="open-import">＋ Добавить прошлую партию</button></div>${archiveFilterForm()}${loading?`<div class="archive-loading-cards"><i></i><i></i><i></i></div>`:archiveFeed.total===0?(archiveFiltersActive()?`<div class="archive-filter-empty compact"><b>Ничего не найдено</b><span>Попробуйте изменить условия или очистить фильтры.</span><button class="button secondary empty-reset" type="button" data-action="reset-archive-filters">Сбросить фильтры</button></div>`:`<div class="archive-filter-empty compact"><b>Архив ещё пуст</b><span>Завершённые партии появятся здесь.</span></div>`):`<div class="recent-archive"><div class="archive-section-title"><b>Результаты</b><span>Найдено ${archiveFeed.total} ${plural(archiveFeed.total,"партия","партии","партий")} · показано ${archiveFeed.items.length}</span></div><div class="archive-server-list">${rows}</div>${archiveFeed.hasMore?`<span class="archive-auto-sentinel" aria-hidden="true"></span><button class="button secondary archive-load-more" data-action="archive-load-more" ${archiveFeed.loading?"disabled":""}>${archiveFeed.loading?"Загружаем…":"Показать ещё"}</button>`:""}</div>`}</section>`}
 function renderArchive(){return renderPagedArchive()}
 
+function buildRecordBook(){
+ const games=state.archive||[];if(!games.length)return[];let low=null,big=null,close=null,long=null,roundHit=null;for(const g of games){const r=ranking(g);if(r.length<2)continue;const margin=r[1].total-r[0].total;if(!low||r[0].total<low.value)low={game:g,player:r[0],value:r[0].total};if(!big||margin>big.value)big={game:g,player:r[0],runner:r[1],value:margin};if(margin>0&&(!close||margin<close.value))close={game:g,player:r[0],runner:r[1],value:margin};if(hasRoundDetails(g)){if(!long||g.rounds.length>long.value)long={game:g,player:r[0],value:g.rounds.length};for(const rd of g.rounds)for(const pl of g.players){const value=rd.scores?.[pl.id]??0;if(!roundHit||value>roundHit.value)roundHit={game:g,player:{name:pl.name,emoji:pl.emoji},value}}}}
+ const careers=(state.knownPlayers||[]).map(p=>({p,c:careerFor(p.id)})).sort((x,y)=>y.c.games-x.c.games),veteran=careers[0],eloBoard=eloRatings(games),eloPeakEntry=[...eloBoard.values()].filter(item=>item.peakRating!=null).sort((a,b)=>b.peakRating-a.peakRating)[0],eloPeakPlayer=eloPeakEntry?(state.knownPlayers||[]).find(p=>p.id===eloPeakEntry.profileId):null,eloPeakGame=eloPeakEntry?games.find(g=>g.id===eloPeakEntry.peakGameId):null,eloLeaderEntry=[...eloBoard.values()].filter(item=>item.longestLeaderStreak>0).sort((a,b)=>b.longestLeaderStreak-a.longestLeaderStreak)[0],eloLeaderPlayer=eloLeaderEntry?(state.knownPlayers||[]).find(p=>p.id===eloLeaderEntry.profileId):null,eloLeaderGame=eloLeaderEntry?games.find(g=>g.id===eloLeaderEntry.leaderStreakGameId):null;return[
+ low&&{icon:"🎯",name:"Рекорд комнаты",value:`${low.value} ${plural(low.value,"очко","очка","очков")}`,who:`${low.player.emoji} ${low.player.name}`,desc:`Самый низкий итог · ${formatDate(low.game.finishedAt||low.game.startedAt)}`,game:low.game},
+ big&&{icon:"💥",name:"Крупнейший отрыв",value:`отрыв ${big.value}`,who:`${big.player.emoji} ${big.player.name}`,desc:`Впереди ${big.runner.name} · ${formatDate(big.game.finishedAt||big.game.startedAt)}`,game:big.game},
+ close&&{icon:"📸",name:"Самый близкий финиш",value:`отрыв ${close.value}`,who:`${close.player.emoji} ${close.player.name}`,desc:`Фотофиниш с ${close.runner.name} · ${formatDate(close.game.finishedAt||close.game.startedAt)}`,game:close.game},
+ long&&{icon:"⏱️",name:"Самая длинная партия",value:`${long.value} ${plural(long.value,"раунд","раунда","раундов")}`,who:`${long.player.emoji} ${long.player.name}`,desc:`Победитель марафона · ${formatDate(long.game.finishedAt||long.game.startedAt)}`,game:long.game},
+ roundHit&&{icon:"🐮",name:"Самый тяжёлый раунд",value:`${roundHit.value} ${plural(roundHit.value,"очко","очка","очков")}`,who:`${roundHit.player.emoji} ${roundHit.player.name}`,desc:`Максимальный штраф за один раунд · ${formatDate(roundHit.game.finishedAt||roundHit.game.startedAt)}`,game:roundHit.game},
+ eloPeakEntry&&eloPeakPlayer&&{icon:"👑",name:"Пик Эло",value:String(eloPeakEntry.peakRating),who:`${eloPeakPlayer.emoji} ${eloPeakPlayer.name}`,desc:`Максимальный рейтинг за всю историю · ${formatDate(eloPeakEntry.peakAt)}`,game:eloPeakGame},
+ eloLeaderEntry&&eloLeaderPlayer&&{icon:"🏔️",name:"Дольше всех на вершине",value:`${eloLeaderEntry.longestLeaderStreak} ${plural(eloLeaderEntry.longestLeaderStreak,"партия","партии","партий")}`,who:`${eloLeaderPlayer.emoji} ${eloLeaderPlayer.name}`,desc:`Первое место по Эло подряд · ${formatDate(eloLeaderEntry.leaderStreakAt)}`,game:eloLeaderGame},
+ veteran&&{icon:"🛡️",name:"Главный ветеран",value:`${veteran.c.games} ${plural(veteran.c.games,"партия","партии","партий")}`,who:`${veteran.p.emoji} ${veteran.p.name}`,desc:"Больше всего сыгранных партий за всю историю"}
+ ].filter(Boolean)}
+function renderRecordBook(){const records=buildRecordBook();if(!records.length)return"";return `<section class="record-book"><header><div><span class="eyebrow">История комнаты</span><h2>Книга рекордов</h2></div><small>${state.archive.length} ${plural(state.archive.length,"партия","партии","партий")} в архиве</small></header><div class="record-grid">${records.map(r=>`<button type="button" class="${r.game?"":"record-static"}" ${r.game?`data-action="open-archive-game" data-id="${r.game.id}"`:`aria-disabled="true" tabindex="-1"`}><i>${r.icon}</i><span><small>${r.name}</small><b>${esc(r.who)}</b><em>${r.desc}</em></span><strong>${r.value}</strong></button>`).join("")}</div></section>`}
 function renderStatistics() {
-  if(cloudMode&&!historyLoaded)return `<section class="archive-empty"><div class="empty-trophy">${icon("chart")}</div><h1>Загружаем статистику</h1><p>История подгружается только при необходимости.</p><div class="modal-loader"></div></section>`;
+  if(cloudMode&&!historyLoaded){if(historyError)return`<section class="archive-empty stats-load-error"><div class="empty-trophy">${icon("chart")}</div><h1>Статистика не загрузилась</h1><p>${esc(historyError)}</p><button class="button primary" data-action="retry-history">Попробовать ещё раз</button></section>`;return `<section class="archive-empty"><div class="empty-trophy">${icon("chart")}</div><h1>Загружаем статистику</h1><p>${esc(historyProgress||"История подгружается только при необходимости.")}</p><div class="modal-loader"></div></section>`}
   const data=statistics(),items=data.items;
   if(!items.length)return `<section class="archive-empty"><div class="empty-trophy">${icon("chart")}</div><h1>Нет партий за период</h1><p>Выберите другой период или завершите игру.</p><div class="period-tabs">${renderPeriods()}</div></section>`;
   const player=p=>`<button ${profileAttrs(p,"stat-player stat-player-open")} data-action="open-player-card" data-id="${p.profileId||""}"><span class="stat-rank">${p.elo?.official?p.elo.rank:'—'}</span><span class="avatar profile-avatar">${esc(p.emoji)}</span><b>${esc(p.name)}</b></button>`;
@@ -799,8 +833,9 @@ root.addEventListener("click", async (event) => {
   const button = event.target.closest("[data-action], [data-tab]");
   if (!button) return;
   if (button.dataset.modal != null) return;
-  if(button.dataset.tab){tab=button.dataset.tab;if(tab==="archive")archiveFiltersOpen=false;render();scrollTo({top:0,behavior:"smooth"});if(tab==="archive"&&!archiveFeed.loaded)loadArchivePage(true);if(tab==="stats"&&!historyLoaded)ensureHistory();return}
+  if(button.dataset.tab){tab=button.dataset.tab;if(tab==="archive")archiveFiltersOpen=false;render();scrollTo({top:0,behavior:"smooth"});if(tab==="archive"&&!archiveFeed.loaded)loadArchivePage(true);if(tab==="stats"&&!historyLoaded)ensureHistory().catch(()=>{});return}
   const action = button.dataset.action;
+  if(action==="retry-history"){historyError=null;historyProgress="Повторяем загрузку…";render();ensureHistory(true).catch(()=>{});return}
   if(action==="check-app-update"){checkForAppUpdate(true);return}
   if(action==="open-admin"){modal="admin";render();return}
   if(action==="admin-logout"){adminSession=null;localStorage.removeItem(adminKey);modal=null;render();return}

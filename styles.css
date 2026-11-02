@@ -518,3 +518,7 @@
 /* v7.0.5: exclusive dropdowns and compact empty result */
 .archive-filter-empty.compact{min-height:0;margin:20px 44px 28px;padding:22px 24px;border:1px dashed #d2c7ae;border-radius:13px;background:#fffaf0;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:5px;text-align:left}.archive-filter-empty.compact b{font-size:18px;line-height:1.2}.archive-filter-empty.compact span{font-size:13px;line-height:1.4;color:var(--muted)}.archive-filter-empty.compact .empty-reset{margin-top:9px;min-height:40px;padding:7px 13px}
 @media(max-width:560px){.archive-filter-empty.compact{margin:12px 12px 22px;padding:18px 16px;border-radius:11px}.archive-filter-empty.compact b{font-size:17px}.archive-filter-empty.compact span{font-size:12px;max-width:270px}.archive-filter-empty.compact .empty-reset{width:100%;margin-top:10px;min-height:43px}}
+
+/* v7.0.6: statistics loading recovery */
+.stats-load-error{min-height:430px}.stats-load-error p{max-width:480px;text-align:center}.stats-load-error .button{margin-top:10px}
+@media(max-width:560px){.stats-load-error{min-height:330px;padding:34px 18px}.stats-load-error h1{font-size:25px}.stats-load-error .button{width:100%;max-width:280px}}
