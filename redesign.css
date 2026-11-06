@@ -934,3 +934,27 @@ body.tv-mode .tv-roster-player:after{opacity:.12!important}
 .premium-profile>header>.premium-avatar{position:relative!important;inset:auto!important;transform:none!important;grid-area:auto!important}
 .premium-profile>header>.profile-identity-summary{flex:1;min-width:0}
 @media(max-width:760px){.premium-profile>header{flex-wrap:wrap}.premium-profile>header>.profile-edit-identity{margin-left:80px!important}}
+
+/* ===== v9.2.1 ===== */
+/* Вкладки статистики: без пустого хвоста */
+.k8-stabs{display:inline-flex!important;width:auto!important;min-width:0!important;max-width:100%;flex:0 0 auto}
+.k8-stabs button{flex:1 1 auto;padding:0 18px!important;white-space:nowrap}
+@media(max-width:760px){.k8-stabs{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr));width:100%!important}.k8-stabs button{padding:0 6px!important}}
+/* Подсказки «?» — тёмные и читаемые */
+.k8-stats .elo-help-popover,.k8-stats .award-help-popover{background:var(--k-ink)!important;color:var(--k-soft)!important;border:1px solid var(--k-line)!important;box-shadow:0 18px 40px rgba(0,0,0,.5)!important;border-radius:16px!important;padding:16px 18px!important;max-width:min(440px,86vw)}
+.k8-stats .elo-help-popover *,.k8-stats .award-help-popover *{color:inherit!important}
+.k8-stats .elo-help-popover b,.k8-stats .award-help-popover b,.k8-stats .elo-help-popover strong{color:var(--k-yellow2)!important;display:block;margin-top:10px}
+.k8-stats .elo-help-popover b:first-child,.k8-stats .award-help-popover b:first-child{margin-top:0}
+.k8-stats .elo-help-popover p,.k8-stats .elo-help-popover li,.k8-stats .award-help-popover p{color:var(--k-soft)!important;font-size:13px;line-height:1.45;margin:4px 0 0}
+.k8-stats .elo-help-popover:before,.k8-stats .elo-help-popover:after,.k8-stats .award-help-popover:before,.k8-stats .award-help-popover:after{border-bottom-color:var(--k-ink)!important;background:var(--k-ink)!important}
+/* Мобильный рейтинг: без белых уголков и фона */
+.k8-stats .stats2-ranking{background:transparent!important;border:0!important;box-shadow:none!important}
+.k8-stats .stats2-ranking>button:before,.k8-stats .stats2-ranking>button:after{display:none!important}
+.k8-stats .stats2-ranking>button.stats2-player-card>.k8-av{grid-column:2;grid-row:1/3;align-self:center}
+.k8-stats .stats2-podium>button:before{display:none!important}
+/* Ряды игроков в сравнении: место под полосой прокрутки */
+.k8-cpick-chips{padding-bottom:12px!important;scrollbar-width:thin;scrollbar-color:var(--k-line) transparent}
+.k8-cpick-chips::-webkit-scrollbar{height:4px}
+.k8-cpick-chips::-webkit-scrollbar-thumb{background:var(--k-line);border-radius:2px}
+.k8-cpick-chips::-webkit-scrollbar-track{background:transparent}
+.k8-stats .k8-cpick{gap:10px}
