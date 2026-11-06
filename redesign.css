@@ -544,3 +544,115 @@ body.k8-modal-open .toast{top:16px!important;bottom:auto!important}
 /* ===== v8.9.1 ===== */
 .k8-prof-body{flex:1 0 auto!important;min-height:auto!important;padding-bottom:12px}
 .k8-tip.up>div{top:auto;bottom:32px}
+
+/* ===== v9.0: экран победителя ===== */
+.modal.k8-winner{background:var(--paper,#fff9e9);border-radius:22px}
+.k8-wtabs{grid-template-columns:repeat(3,minmax(0,1fr))!important;margin-bottom:14px}
+.k8-wtabs button{min-height:42px!important;font-size:13px!important;border-radius:9px!important;border:0!important;background:transparent!important;color:#4f4326!important;box-shadow:none!important}
+.k8-wtabs button.active{background:var(--k-ink)!important;color:var(--k-yellow2)!important}
+.k8-win{display:flex;flex-direction:column;gap:12px}
+.k8-win-hero{position:relative;overflow:hidden;display:flex;flex-direction:column;align-items:center;gap:8px;padding:22px 16px 18px;border-radius:20px;background:radial-gradient(circle at 50% 0,rgba(244,200,74,.28),transparent 60%),var(--k-card);color:var(--k-text);text-align:center}
+.k8-win-hero .k8-eyebrow{color:var(--k-yellow2)}
+.k8-win-hero h2{margin:0;font-family:var(--k-display);font-weight:800;font-size:clamp(26px,7vw,38px);line-height:1.1;color:#fff}
+.k8-win-avatars{display:flex;gap:14px;justify-content:center;margin:6px 0 2px}
+.k8-av-xl{width:104px;height:104px;font-size:58px}
+.k8-av-xl .k8-av-crown{top:-14px;right:-4px;width:34px;height:25px}
+.k8-av-xl .k8-av-crown .k8-crown{width:34px;height:25px}
+.k8-win-score{margin:0;font-size:15px;color:var(--k-soft)}
+.k8-win-score b{font-family:var(--k-display);font-size:26px;color:var(--k-yellow2);margin-right:4px}
+.k8-win-hero .k8-cry{color:#fff;font-size:19px}
+.k8-win-hero .k8-cry small{color:var(--k-soft)}
+.k8-win-hero .k8-fate{background:rgba(0,0,0,.3)}
+.k8-win-facts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.k8-win-facts span{display:flex;flex-direction:column;align-items:center;padding:10px 6px;border-radius:14px;background:#f1e8cc}
+.k8-win-facts b{font-family:var(--k-display);font-size:22px;line-height:1}
+.k8-win-facts small{font-size:11px;color:#5f584a;margin-top:4px}
+.k8-win-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:5px}
+.k8-win-list li{display:flex;align-items:center;gap:10px;min-height:48px;padding:4px 14px 4px 10px;border-radius:12px;background:#fff;border:1px solid #e3d8b8}
+.k8-win-list li .k8-av{width:34px;height:34px;font-size:18px;background:#f6edcf}
+.k8-win-list li b{flex:1;font-size:15px}
+.k8-win-list li strong{font-family:var(--k-display);font-size:18px}
+.k8-win-place{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:800;background:#efe6cc;color:#5f584a}
+.k8-win-list li.gold{background:#fff1bf;border-color:#e3b23c}.k8-win-list li.gold .k8-win-place{background:#e3b23c;color:#201e1b}
+.k8-win-list li.silver .k8-win-place{background:#cfd8dc;color:#201e1b}
+.k8-win-list li.bronze .k8-win-place{background:#d9a273;color:#201e1b}
+.k8-winner .winner-actions{position:sticky;bottom:-30px;margin:14px -30px -30px;padding:12px 30px 18px;background:linear-gradient(180deg,rgba(255,249,233,0),var(--paper,#fff9e9) 30%);display:grid!important;grid-template-columns:1fr 1fr;gap:8px}
+@media(max-width:760px){.k8-winner .winner-actions{margin:14px -20px -25px;padding:12px 20px 16px;bottom:-25px}}
+
+/* ===== v9.0: табло на ТВ ===== */
+body.tv-mode{background:var(--k-bg)!important}
+.k8-tv-live{display:grid!important;grid-template-rows:auto 1fr;min-height:100vh;box-sizing:border-box}
+.k8-tv{display:grid;grid-template-rows:auto 1fr auto;gap:2.4vh;min-height:0;height:100%;color:var(--k-text);font-family:Inter,system-ui,sans-serif}
+.k8-tv-head{display:flex;align-items:center;gap:2vw}
+.k8-tv-head small{display:block;font-size:clamp(12px,1.2vw,22px);font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--k-muted)}
+.k8-tv-head h1{margin:0;font-family:var(--k-display);font-weight:800;font-size:clamp(32px,4.2vw,80px);line-height:1.02;color:#fff}
+.k8-tv-66{padding:.6vh 1.2vw;border-radius:999px;background:var(--k-yellow);color:var(--k-ink);font-family:var(--k-display);font-weight:800;font-size:clamp(14px,1.4vw,26px)}
+.k8-tv-entered{margin-left:auto;display:flex;flex-direction:column;align-items:flex-end;gap:.8vh}
+.k8-tv-entered small{letter-spacing:.04em;text-transform:none;font-size:clamp(12px,1.1vw,20px);color:var(--k-soft)}
+.k8-tv-entered>div{display:flex;gap:.5vw}
+.k8-tv-entered span{width:clamp(30px,2.8vw,54px);height:clamp(30px,2.8vw,54px);border-radius:50%;display:grid;place-items:center;font-size:clamp(16px,1.5vw,28px);background:var(--k-bg);border:3px solid #3f7d69;opacity:.45}
+.k8-tv-entered span.on{opacity:1;background:#1c5a47;border-color:var(--k-good)}
+.k8-tv-main{display:grid;grid-template-columns:minmax(0,44fr) minmax(0,56fr);gap:2vw;min-height:0}
+.k8-tv-main.no-podium{grid-template-columns:1fr}
+.k8-tv-podium{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));align-items:end;gap:1vw;padding:3vh 1.5vw 0;border-radius:2vw;background:var(--k-card);border:2px solid var(--k-line);overflow:hidden}
+.k8-tv-pod{display:flex;flex-direction:column;align-items:center;gap:.8vh;min-width:0;text-align:center}
+.k8-tv-pod b{font-size:clamp(18px,1.9vw,38px);max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.k8-tv-pod small{font-size:clamp(12px,1.1vw,22px);color:var(--k-muted)}
+.k8-tv-avwrap{position:relative;display:inline-block}
+.k8-av-tv{width:clamp(70px,7vw,140px);height:clamp(70px,7vw,140px);font-size:clamp(38px,4vw,78px)}
+.k8-tv-pod-1 .k8-av-tv{width:clamp(90px,9vw,176px);height:clamp(90px,9vw,176px);font-size:clamp(50px,5vw,100px)}
+.k8-av-tv .k8-av-crown,.k8-av-row .k8-av-crown{width:clamp(22px,2.2vw,42px);height:clamp(16px,1.6vw,32px);top:-12%;right:-6%}
+.k8-av-tv .k8-av-crown .k8-crown,.k8-av-row .k8-av-crown .k8-crown{width:100%;height:100%}
+.k8-tv-block{width:100%;margin-top:.6vh;border-radius:1.2vw 1.2vw 0 0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#1c5a47}
+.k8-tv-block strong{font-family:var(--k-display);font-weight:800;font-size:clamp(28px,3.4vw,68px);line-height:1}
+.k8-tv-block span{font-size:clamp(12px,1vw,20px);font-weight:700;opacity:.8;margin-top:.6vh}
+.k8-tv-pod-1 .k8-tv-block{height:26vh;background:var(--k-yellow);color:var(--k-ink)}
+.k8-tv-pod-1 .k8-tv-block strong{font-size:clamp(36px,4.6vw,90px)}
+.k8-tv-pod-2 .k8-tv-block{height:18vh;color:#dfe7e3}
+.k8-tv-pod-3 .k8-tv-block{height:12vh;color:#f1d9c3}
+.k8-tv-rows{display:grid;grid-template-rows:repeat(var(--rows),minmax(0,1fr));gap:1vh;min-height:0;max-height:100%}
+.k8-tv-row{display:flex;align-items:center;gap:1.4vw;padding:0 1.8vw;border-radius:1.2vw;background:var(--k-card2);border:2px solid var(--k-line2);min-height:0}
+.k8-tv-row.over{border-color:#6b3a22}
+.k8-tv-place{width:2.4vw;font-family:var(--k-display);font-weight:800;font-size:clamp(16px,1.6vw,32px);color:var(--k-muted)}
+.k8-av-row{width:clamp(36px,4vw,74px);height:clamp(36px,4vw,74px);font-size:clamp(20px,2.2vw,42px)}
+.k8-tv-row b{flex:1;min-width:0;font-size:clamp(18px,2vw,40px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.k8-tv-row em{font-style:normal;font-weight:700;font-size:clamp(14px,1.4vw,28px);color:var(--k-muted)}
+.k8-tv-row em.zero{color:var(--k-good)}.k8-tv-row em.heavy{color:var(--k-over)}
+.k8-tv-row strong{min-width:5vw;text-align:right;font-family:var(--k-display);font-weight:800;font-size:clamp(22px,2.6vw,52px)}
+.k8-tv-row.over strong{color:var(--k-over)}
+.k8-tv-ticker{display:flex;align-items:center;gap:1.4vw;padding:1.6vh 1.6vw;border-radius:1.4vw;background:var(--k-paper);color:var(--k-ink)}
+.k8-tv-ticker span{flex:0 0 auto;padding:.5vh .9vw;border-radius:.6vw;background:#b8372c;color:#fff;font-weight:800;font-size:clamp(12px,1.1vw,22px);letter-spacing:.06em;text-transform:uppercase}
+.k8-tv-ticker b{font-size:clamp(16px,1.7vw,34px);font-weight:700;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.k8-tv .k8-react{width:clamp(34px,3vw,58px);height:clamp(34px,3vw,58px);font-size:clamp(22px,2vw,40px);right:-18%;top:-18%}
+.k8-tv-cry .k8-cry{font-size:clamp(20px,2.4vw,44px);color:#fff}
+.tv-winner-avatars .k8-face{display:inline-grid;width:clamp(90px,10vw,190px);height:clamp(90px,10vw,190px);font-size:clamp(60px,7vw,140px)}
+@media(max-width:900px){.k8-tv-main{grid-template-columns:1fr}.k8-tv-podium{min-height:40vh}}
+.k8-win>*{flex-shrink:0}
+.k8-win-list li b{text-align:left}
+.k8-winner{text-align:left}
+
+/* ===== v9.0.1 ===== */
+/* Живой эмодзи всегда занимает весь круг аватара */
+.k8-av>.k8-face{position:absolute;inset:0;width:auto;height:auto;place-self:auto}
+.k8-face .k8-live{left:12%;top:12%;width:76%;height:76%}
+/* Корона — по центру над аватаром, с лёгким наклоном */
+.k8-av .k8-av-crown{top:auto!important;right:auto!important;left:50%!important;bottom:calc(100% - 9%);width:48%!important;height:auto!important;aspect-ratio:30/22;transform:translateX(-50%) rotate(-10deg);z-index:2}
+.k8-av .k8-av-crown .k8-crown{width:100%!important;height:100%!important}
+/* Событие раунда на ТВ — в новом стиле */
+body.tv-mode .tv-event-layer{background:rgba(7,26,20,.55)!important;backdrop-filter:blur(6px)}
+body.tv-mode .tv-event{position:relative!important;top:auto!important;left:auto!important;right:auto!important;margin:0 auto!important;max-width:min(1100px,80vw);padding:3vh 3vw!important;border:2px solid var(--k-line)!important;border-radius:2vw!important;background:var(--k-card)!important;color:var(--k-text)!important;box-shadow:0 30px 80px rgba(0,0,0,.5)!important;display:flex!important;flex-direction:column;align-items:center;text-align:center;gap:1.2vh!important}
+body.tv-mode .tv-event>span{width:clamp(70px,6vw,120px);height:clamp(70px,6vw,120px);display:grid;place-items:center;border-radius:50%;background:var(--k-yellow);font-size:clamp(40px,3.6vw,72px)!important}
+body.tv-mode .tv-event div{display:flex!important;flex-direction:column;align-items:center;gap:1vh}
+body.tv-mode .tv-event small{font-size:clamp(12px,1vw,20px)!important;letter-spacing:.14em;color:var(--k-yellow2)!important}
+body.tv-mode .tv-event b{font-family:var(--k-display);font-weight:800;font-size:clamp(28px,3vw,60px)!important;line-height:1.1;color:#fff!important}
+body.tv-mode .tv-event p{font-size:clamp(16px,1.6vw,32px)!important;color:var(--k-soft)!important}
+body.tv-mode .tv-event.record>span,body.tv-mode .tv-event.heavy>span,body.tv-mode .tv-event.warning>span{background:var(--k-coral)}
+body.tv-mode .tv-event.record,body.tv-mode .tv-event.warning{border-color:var(--k-coral)!important}
+/* ТВ перед первым раундом — тёмная тема */
+body.tv-mode .tv-wait{background:var(--k-card)!important;border:2px solid var(--k-line)!important;color:var(--k-text)!important;box-shadow:none!important}
+body.tv-mode .tv-wait h1{font-family:var(--k-display);font-weight:800;color:#fff!important}
+body.tv-mode .tv-wait>div>small,body.tv-mode .tv-roster-shell>small{color:var(--k-yellow2)!important}
+body.tv-mode .tv-wait p{color:var(--k-soft)!important}
+body.tv-mode .tv-roster-player{background:var(--k-card2)!important;border:2px solid var(--k-line2)!important;color:var(--k-text)!important;box-shadow:none!important}
+body.tv-mode .tv-roster-player b{color:var(--k-text)!important}
+body.tv-mode .tv-roster-player:after{opacity:.12!important}
