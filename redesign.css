@@ -266,3 +266,70 @@ body.k8-pad-open .app-shell{padding-bottom:440px!important}
   .k8-entry .score-person small{display:none}
 }
 @media(prefers-reduced-motion:reduce){.k8-pad-keys button:active{transform:none}}
+
+/* ===== v8.1 ===== */
+body.k8-modal-open .tabs{display:none!important}
+body.k8-modal-open .k8-pad{display:none!important}
+
+/* Ввод очков: компактные строки и аккуратная кнопка */
+.k8-entry .score-row{min-height:50px;padding:4px 6px 4px 8px}
+.k8-entry .score-row .k8-av{width:34px;height:34px;font-size:18px}
+.k8-entry .number-wrap{flex-basis:66px;height:40px}
+.k8-entry .score-actions{background:transparent!important;box-shadow:none!important;border:0!important;position:static!important;margin:0!important}
+.k8-entry .k8-submit{min-height:52px;font-family:Inter,system-ui,sans-serif!important;font-size:15px!important;font-weight:800;letter-spacing:0;gap:8px}
+.k8-entry .k8-submit:disabled{background:transparent!important;color:var(--k-soft)!important;border:1.5px dashed #3f7d69!important;box-shadow:none!important}
+.k8-entry .k8-submit.ready:not(:disabled){font-family:var(--k-display)!important;font-size:16px!important}
+.k8-pad-value.empty{font-family:Inter,system-ui,sans-serif;font-weight:700;color:var(--k-muted)}
+
+/* Пьедестал: подпись очков */
+.k8-pod-block span{text-transform:none}
+
+/* Ход партии — компактная таблица */
+.k8-history .k8-head span{font-size:12px;color:var(--k-muted)}
+.k8-table-wrap{overflow-x:auto;border-radius:16px;border:1px solid var(--k-line2);background:var(--k-card2);scrollbar-width:thin}
+.k8-table{border-collapse:separate;border-spacing:0;min-width:100%;font-size:14px;color:var(--k-text)}
+.k8-table th,.k8-table td{padding:8px 10px;text-align:center;white-space:nowrap;border-bottom:1px solid var(--k-line2)}
+.k8-table tbody tr:last-child>*{border-bottom:0}
+.k8-table thead th{font-size:11px;font-weight:800;color:var(--k-muted);text-transform:uppercase;letter-spacing:.06em;background:var(--k-card)}
+.k8-table thead button{min-width:36px;min-height:32px;border:1px solid var(--k-line);border-radius:8px;background:var(--k-bg);color:var(--k-text);font-weight:800;cursor:pointer}
+.k8-table thead button.last{background:var(--k-yellow);border-color:var(--k-yellow);color:var(--k-ink)}
+.k8-table tbody th{text-align:left;font-weight:700;position:sticky;left:0;z-index:1;background:var(--k-card2);max-width:130px;overflow:hidden;text-overflow:ellipsis}
+.k8-table tbody th span{margin-right:6px}
+.k8-table .k8-th-name{position:sticky;left:0;z-index:2;text-align:left}
+.k8-table td.last{background:rgba(244,200,74,.08);font-weight:800}
+.k8-table td.zero{color:var(--k-good)}
+.k8-table td.heavy{color:var(--k-over);font-weight:800}
+.k8-table .k8-total{font-family:var(--k-display);font-weight:800;position:sticky;right:0;background:var(--k-card);border-left:1px solid var(--k-line2)}
+.k8-table .k8-th-total{position:sticky;right:0;z-index:2;border-left:1px solid var(--k-line2)}
+.k8-table .k8-total.over{color:var(--k-over)}
+
+/* Группы эмодзи */
+.k8-emoji-tabs{display:flex;gap:6px;overflow-x:auto;padding-bottom:6px;margin-bottom:8px;scrollbar-width:none}
+.k8-emoji-tabs::-webkit-scrollbar{display:none}
+.k8-emoji-tabs button{flex:0 0 auto;display:inline-flex;align-items:center;gap:6px;min-height:38px;padding:0 12px;border-radius:999px;border:1px solid #d9cda9;background:#fff;color:var(--k-ink);font-weight:700;font-size:13px;cursor:pointer}
+.k8-emoji-tabs button.on{background:var(--k-ink);border-color:var(--k-ink);color:var(--k-yellow2)}
+.k8-emoji .emoji-grid{margin-bottom:0}
+
+/* Профиль игрока */
+.k8-prof-modal{padding-bottom:0!important}
+.k8-prof{display:flex;flex-direction:column;gap:12px}
+.k8-prof .eyebrow{margin:0}
+.k8-prof-preview{display:flex;align-items:center;gap:14px;padding:14px;border-radius:16px;background:var(--profile-soft);border:2px solid var(--profile-accent);box-shadow:none!important}
+.k8-prof-av{width:64px;height:64px;flex:0 0 auto;display:grid;place-items:center;font-size:38px;border-radius:16px;background:#fff;border:2px solid var(--profile-accent)}
+.k8-prof-id{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.k8-prof-label{font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#5f584a}
+.k8-prof-name{width:100%;box-sizing:border-box;height:44px;border:2px solid transparent;border-bottom-color:rgba(32,30,27,.3);border-radius:10px;background:rgba(255,255,255,.65);padding:0 10px;font:inherit;font-size:20px;font-weight:800;color:var(--k-ink)}
+.k8-prof-name:focus{outline:none;border-color:var(--k-ink);background:#fff}
+.k8-prof-id small{font-size:12px;color:#4f4326}
+.k8-ptabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;padding:4px;border-radius:12px;background:#e6dcc0;position:sticky;top:-30px;z-index:3}
+.k8-ptabs button{min-height:40px;border:0;border-radius:9px;background:transparent;color:#4f4326;font-weight:800;font-size:13px;cursor:pointer}
+.k8-ptabs button.on{background:var(--k-ink);color:var(--k-yellow2)}
+.k8-prof-body{min-height:240px}
+.k8-prof-body .field-label:first-child{margin-top:0}
+.k8-prof-save{position:sticky;bottom:0;z-index:3;margin:4px -30px 0;padding:12px 30px calc(16px + env(safe-area-inset-bottom));background:linear-gradient(180deg,rgba(255,249,233,0),var(--paper,#fff9e9) 30%)}
+@media(max-width:760px){
+  .k8-prof-save{margin:4px -20px 0;padding:12px 20px calc(16px + env(safe-area-inset-bottom))}
+  .k8-ptabs{top:-25px}
+  .k8-prof-name{font-size:18px}
+  .k8-entry .score-row .k8-proj{font-size:12px}
+}
