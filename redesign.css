@@ -333,3 +333,23 @@ body.k8-modal-open .k8-pad{display:none!important}
   .k8-prof-name{font-size:18px}
   .k8-entry .score-row .k8-proj{font-size:12px}
 }
+
+/* ===== v8.2 ===== */
+html:has(body.k8-modal-open),body.k8-modal-open{overflow:hidden!important;overscroll-behavior:none}
+.modal-backdrop .modal{overscroll-behavior:contain}
+/* Профиль: постоянная высота окна, без прыжков между вкладками */
+.modal.k8-prof-modal{height:min(760px,calc(100dvh - 36px));display:flex;flex-direction:column}
+.k8-prof{flex:1}
+.k8-prof-body{flex:1;min-height:0}
+/* Компактная клавиатура: 2 ряда по 6 кнопок */
+.k8-pad{gap:8px;padding:10px 10px calc(10px + env(safe-area-inset-bottom))}
+.k8-pad-head{gap:10px;padding:0 2px}
+.k8-pad-av{font-size:22px}
+.k8-pad-value{min-width:56px;font-size:28px}
+.k8-pad-close{width:40px;height:40px;min-height:40px;flex:0 0 auto;border-radius:12px;background:var(--k-bg);color:var(--k-soft);font-size:22px;line-height:1;cursor:pointer}
+.k8-pad-keys{grid-template-columns:repeat(6,minmax(0,1fr));gap:6px}
+.k8-pad-keys button{height:50px;font-size:20px;border-radius:12px}
+.k8-pad-keys .k8-pad-next{font-size:12px;padding:0 2px}
+.k8-pad-keys .k8-pad-next:active{background:var(--k-yellow)}
+.k8-pad-keys .k8-pad-back:active{background:#3f7d69}
+body.k8-pad-open .app-shell{padding-bottom:220px!important}

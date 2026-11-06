@@ -14,7 +14,7 @@ const PROFILE_PALETTES=[
 ];
 const PROFILE_PATTERNS=[{id:"none",name:"Без узора"},{id:"dots",name:"Крапинки"},{id:"stripes",name:"Полосы"},{id:"diamonds",name:"Ромбики"},{id:"waves",name:"Волны"}];
 const DEFAULT_PROFILE_PATTERNS=PROFILE_PATTERNS.filter(x=>x.id!=="none");
-const APP_VERSION = "8.1.0";
+const APP_VERSION = "8.2.0";
 const LIMIT = 10;
 const WIN_LINE = 66;
 const root = document.querySelector("#app");
@@ -627,24 +627,27 @@ function renderScoreEntry(game) {
 function k8SubmitLabel(ready,roundNo,left){if(!navigator.onLine)return"Нет соединения";if(pendingWrites.length)return"Сохраняем черновики…";return ready?`${icon("save")} Записать раунд ${roundNo}`:`Осталось ввести: ${left}`}
 function renderPad(game){
   if(!K8_COARSE||game.players.length<2)return"";
-  return`<div class="k8-pad" aria-label="Клавиатура ввода очков" hidden><div class="k8-pad-head"><span class="k8-pad-av"></span><div><b class="k8-pad-name"></b><small class="k8-pad-hint"></small></div><strong class="k8-pad-value">—</strong></div><div class="k8-pad-keys">${["1","2","3","4","5","6","7","8","9"].map(k=>`<button type="button" data-pad-key="${k}">${k}</button>`).join("")}<button type="button" class="k8-pad-back" data-pad-key="back" aria-label="Стереть">⌫</button><button type="button" data-pad-key="0">0</button><button type="button" class="k8-pad-next" data-pad-key="next">Далее</button></div><button type="button" class="k8-pad-close" data-pad-key="close">Скрыть клавиатуру</button></div>`;
+  const key=k=>`<button type="button" data-pad-key="${k}">${k}</button>`;
+  return`<div class="k8-pad" aria-label="Клавиатура ввода очков" hidden><div class="k8-pad-head"><span class="k8-pad-av"></span><div><b class="k8-pad-name"></b><small class="k8-pad-hint"></small></div><strong class="k8-pad-value">—</strong><button type="button" class="k8-pad-close" data-pad-key="close" aria-label="Скрыть клавиатуру">×</button></div><div class="k8-pad-keys">${["1","2","3","4","5"].map(key).join("")}<button type="button" class="k8-pad-back" data-pad-key="back" aria-label="Стереть">⌫</button>${["6","7","8","9","0"].map(key).join("")}<button type="button" class="k8-pad-next" data-pad-key="next">Далее</button></div></div>`;
 }
 function updateRowProjection(input){const row=input.closest(".score-row"),proj=row?.querySelector(".k8-proj");if(proj)proj.textContent=k8Projection(Number(proj.dataset.total||0),input.value)}
+let k8PadShownFor=null;
 function updatePadUi(){
   const pad=document.querySelector(".k8-pad");
   document.querySelectorAll(".k8-erow").forEach(row=>row.classList.toggle("pad-active",row.dataset.padPlayer===activePadPlayer));
   const input=activePadPlayer&&document.querySelector(`[data-draft-player="${activePadPlayer}"]`);
-  if(!pad||!input){if(activePadPlayer&&!input)activePadPlayer=null;if(pad)pad.hidden=true;document.body.classList.remove("k8-pad-open");return}
+  if(!pad||!input){if(activePadPlayer&&!input)activePadPlayer=null;k8PadShownFor=null;if(pad)pad.hidden=true;document.body.classList.remove("k8-pad-open");return}
   const player=state.currentGame.players.find(p=>p.id===activePadPlayer),row=input.closest(".score-row"),total=Number(row?.querySelector(".k8-proj")?.dataset.total||0),v=input.value;
   pad.hidden=false;document.body.classList.add("k8-pad-open");
   pad.querySelector(".k8-pad-av").textContent=player?.emoji||"";
   pad.querySelector(".k8-pad-name").textContent=player?.name||"";
   pad.querySelector(".k8-pad-hint").textContent=v===""?`сейчас ${total} · введите очки`:`станет ${total+Number(v)}`;
-  const pv=pad.querySelector(".k8-pad-value");pv.textContent=v===""?"—":v;pv.classList.toggle("empty",v==="");
+  const pv=pad.querySelector(".k8-pad-value");pv.textContent=v;pv.classList.toggle("empty",v==="");
   const ids=[...document.querySelectorAll("[data-draft-player]")].map(x=>x.dataset.draftPlayer),left=ids.filter(id=>id!==activePadPlayer&&document.querySelector(`[data-draft-player="${id}"]`).value==="").length;
   pad.querySelector(".k8-pad-next").textContent=left?"Далее":"Готово";
-  row?.scrollIntoView({block:"nearest",behavior:"smooth"});
+  if(k8PadShownFor!==activePadPlayer){k8PadShownFor=activePadPlayer;requestAnimationFrame(()=>k8ScrollRowAbovePad(row,pad))}
 }
+function k8ScrollRowAbovePad(row,pad){if(!row||!pad)return;const r=row.getBoundingClientRect(),limit=window.innerHeight-pad.getBoundingClientRect().height-12,top=72;let delta=0;if(r.bottom+r.height*.7>limit)delta=r.bottom+r.height*.7-limit;else if(r.top<top)delta=r.top-top;if(Math.abs(delta)>2)window.scrollBy({top:delta,behavior:"smooth"})}
 function commitPad(input){if(input&&draftSaveTimers.has(input.dataset.draftPlayer))input.dispatchEvent(new Event("change",{bubbles:true}))}
 function padPress(key){
   const input=activePadPlayer&&document.querySelector(`[data-draft-player="${activePadPlayer}"]`);
