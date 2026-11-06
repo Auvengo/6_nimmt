@@ -958,3 +958,65 @@ body.tv-mode .tv-roster-player:after{opacity:.12!important}
 .k8-cpick-chips::-webkit-scrollbar-thumb{background:var(--k-line);border-radius:2px}
 .k8-cpick-chips::-webkit-scrollbar-track{background:transparent}
 .k8-stats .k8-cpick{gap:10px}
+
+/* ===== v9.2.2 ===== */
+/* Мобильный рейтинг: отступы между карточками и читаемая калибровка */
+.k8-stats .stats2-ranking{display:flex!important;flex-direction:column!important;gap:8px!important}
+.k8-stats .stats2-ranking>button{margin:0!important}
+.k8-stats .mobile-elo small,.k8-stats .mobile-elo>small{color:var(--k-yellow2)!important;opacity:1!important}
+.k8-stats .elo-mobile-calibration b{color:#fff!important}
+.k8-stats .elo-mobile-calibration small{color:var(--k-soft)!important}
+.k8-stats .stats2-player-card>small{color:var(--k-soft)!important}
+.k8-stats .stats2-player-card>em{color:var(--k-muted)!important;font-style:normal}
+/* Карточка игрока — единая тёмная тема, всё читаемо */
+.premium-profile .profile-elo-line small,.premium-profile .profile-elo-line span>small{color:var(--k-muted)!important}
+.premium-profile .profile-elo-line b{color:var(--k-yellow2)!important}
+.premium-profile .profile-elo-line.calibration b{color:var(--k-yellow2)!important}
+.premium-profile .profile-elo-line em{color:var(--k-soft)!important}
+.premium-profile .profile-elo-line em.up{color:var(--k-good)!important}.premium-profile .profile-elo-line em.down{color:#ffb4a8!important}
+.premium-profile .profile-main-stats strong{color:#fff!important}
+.premium-profile .profile-main-stats small,.premium-profile .profile-record{color:var(--k-soft)!important}
+.premium-profile .profile-record b{color:#fff!important}
+.premium-profile .profile-sticky-bar span{color:var(--k-yellow2)!important}
+.premium-profile .profile-sticky-compare,.premium-profile .profile-edit-identity{border-color:var(--k-line)!important;color:var(--k-text)!important;background:var(--k-bg)!important}
+/* «Что изменилось» */
+.premium-profile .profile-change{background:rgba(0,0,0,.22)!important;border:1px solid rgba(255,255,255,.1)!important;color:var(--k-text)!important;box-shadow:none!important}
+.premium-profile .profile-change *{color:var(--k-soft)}
+.premium-profile .profile-change small:first-child,.premium-profile .profile-change header small{color:var(--k-yellow2)!important}
+.premium-profile .profile-change b,.premium-profile .profile-change strong{color:#fff!important}
+.premium-profile .profile-change span.good,.premium-profile .profile-change span.bad,.premium-profile .profile-change span:not([class]){background:var(--k-card2)!important;border:1px solid var(--k-line2)!important;box-shadow:none!important}
+.premium-profile .profile-change span.good b,.premium-profile .profile-change span.good em{color:var(--k-good)!important}
+.premium-profile .profile-change span.bad b,.premium-profile .profile-change span.bad em{color:#ffb4a8!important}
+.premium-profile .profile-change span small{color:var(--k-muted)!important}
+/* Форма */
+.premium-profile .profile-form-summary{background:rgba(0,0,0,.22)!important;border:1px solid rgba(255,255,255,.1)!important;box-shadow:none!important}
+.premium-profile .profile-form-summary b{color:#fff!important}
+.premium-profile .profile-form-summary small,.premium-profile .profile-form-summary span{color:var(--k-soft)!important}
+.premium-profile .profile-form-summary.good b{color:var(--k-good)!important}
+.premium-profile .profile-form-summary.bad b{color:#ffb4a8!important}
+.premium-profile .sample-note{color:var(--k-muted)!important}
+.premium-profile .compact-heading small{color:var(--k-muted)!important}
+/* График — тёмный */
+.premium-profile .profile-chart{background:rgba(0,0,0,.22)!important;border:1px solid rgba(255,255,255,.1)!important;box-shadow:none!important}
+.premium-profile .profile-chart .profile-grid{stroke:rgba(255,255,255,.12)!important}
+.premium-profile .profile-chart polyline{stroke:var(--k-good)!important;stroke-width:4!important}
+.premium-profile .profile-chart circle{stroke:#0b231c!important}
+.premium-profile .profile-chart circle[fill="#176b55"]{fill:var(--k-good)!important}
+.premium-profile .profile-chart .profile-score-bg{fill:#0b231c!important;stroke:var(--k-line)!important}
+.premium-profile .profile-chart .profile-score{fill:#fff!important;font-weight:800}
+.premium-profile .profile-chart-legend span,.premium-profile .profile-time-axis span,.premium-profile .profile-time-axis b{color:var(--k-soft)!important}
+.premium-profile .profile-chart-legend b{color:var(--k-yellow2)!important}
+.premium-profile .profile-chart-legend i{background:var(--k-good)!important;border-color:#0b231c!important}
+.premium-profile .profile-chart-legend i.win{background:var(--k-yellow)!important}
+/* Сильные стороны */
+.premium-profile .profile-strengths article{background:rgba(0,0,0,.22)!important;border:1px solid rgba(255,255,255,.1)!important;box-shadow:none!important}
+.premium-profile .profile-strengths small{color:var(--k-yellow2)!important}
+.premium-profile .profile-strengths b{color:#fff!important}
+.premium-profile .profile-strengths p{color:var(--k-soft)!important}
+.premium-profile .profile-elo-summary{background:rgba(0,0,0,.22)!important;border:1px solid rgba(255,255,255,.1)!important}
+@media(max-width:760px){
+  .premium-profile>header>.profile-identity-summary{flex:1 1 calc(100% - 82px)!important}
+  .premium-profile>header>.profile-edit-identity{order:3;margin:0 0 0 80px!important;position:static!important}
+  .premium-profile .profile-chart .profile-score{font-size:17px!important}
+  .premium-profile .profile-chart .profile-score-bg{width:40px;height:22px;transform:translate(-5px,-4px)}
+}

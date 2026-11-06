@@ -18,7 +18,7 @@ const DEFAULT_PROFILE_PATTERNS=PROFILE_PATTERNS.filter(x=>x.id!=="none");
 const K8_EXTRA_PALETTES=[{id:"rose",name:"Роза",color:"#d9466f",soft:"#ffdbe5",need:{wins:5}},{id:"gold",name:"Золото",color:"#e3b23c",soft:"#fff0c2",need:{wins:15}},{id:"midnight",name:"Полночь",color:"#3d4f9f",soft:"#dde3ff",need:{games:30}},{id:"neon",name:"Неон",color:"#18b98a",soft:"#c9f7e6",need:{games:50}}];
 const K8_EXTRA_PATTERNS=[{id:"clover",name:"Клевер",need:{wins:1}},{id:"spots",name:"Коровьи пятна",need:{games:10}},{id:"horseshoe",name:"Подковы",need:{wins:5}},{id:"straw",name:"Солома",need:{games:25}},{id:"plaid",name:"Скатерть",need:{games:50}},{id:"stars",name:"Звёзды",need:{wins:15}}];
 const K8_ALL_PALETTES=[...PROFILE_PALETTES,...K8_EXTRA_PALETTES],K8_ALL_PATTERNS=[...PROFILE_PATTERNS,...K8_EXTRA_PATTERNS];
-const APP_VERSION = "9.2.1";
+const APP_VERSION = "9.2.2";
 const LIMIT = 10;
 const WIN_LINE = 66;
 const root = document.querySelector("#app");
