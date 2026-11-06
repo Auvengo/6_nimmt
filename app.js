@@ -14,7 +14,7 @@ const PROFILE_PALETTES=[
 ];
 const PROFILE_PATTERNS=[{id:"none",name:"Без узора"},{id:"dots",name:"Крапинки"},{id:"stripes",name:"Полосы"},{id:"diamonds",name:"Ромбики"},{id:"waves",name:"Волны"}];
 const DEFAULT_PROFILE_PATTERNS=PROFILE_PATTERNS.filter(x=>x.id!=="none");
-const APP_VERSION = "8.2.0";
+const APP_VERSION = "8.3.0";
 const LIMIT = 10;
 const WIN_LINE = 66;
 const root = document.querySelector("#app");
@@ -628,7 +628,7 @@ function k8SubmitLabel(ready,roundNo,left){if(!navigator.onLine)return"Нет с
 function renderPad(game){
   if(!K8_COARSE||game.players.length<2)return"";
   const key=k=>`<button type="button" data-pad-key="${k}">${k}</button>`;
-  return`<div class="k8-pad" aria-label="Клавиатура ввода очков" hidden><div class="k8-pad-head"><span class="k8-pad-av"></span><div><b class="k8-pad-name"></b><small class="k8-pad-hint"></small></div><strong class="k8-pad-value">—</strong><button type="button" class="k8-pad-close" data-pad-key="close" aria-label="Скрыть клавиатуру">×</button></div><div class="k8-pad-keys">${["1","2","3","4","5"].map(key).join("")}<button type="button" class="k8-pad-back" data-pad-key="back" aria-label="Стереть">⌫</button>${["6","7","8","9","0"].map(key).join("")}<button type="button" class="k8-pad-next" data-pad-key="next">Далее</button></div></div>`;
+  return`<div class="k8-pad" aria-label="Клавиатура ввода очков" hidden><div class="k8-pad-head"><span class="k8-pad-av"></span><div><b class="k8-pad-name"></b><small class="k8-pad-hint"></small></div><strong class="k8-pad-value"></strong><button type="button" class="k8-pad-close" data-pad-key="close" aria-label="Скрыть клавиатуру">×</button></div><div class="k8-pad-keys">${["1","2","3","4","5","6","7","8","9"].map(key).join("")}<button type="button" class="k8-pad-back" data-pad-key="back" aria-label="Стереть">⌫</button>${key("0")}<button type="button" class="k8-pad-next" data-pad-key="next">Далее</button></div></div>`;
 }
 function updateRowProjection(input){const row=input.closest(".score-row"),proj=row?.querySelector(".k8-proj");if(proj)proj.textContent=k8Projection(Number(proj.dataset.total||0),input.value)}
 let k8PadShownFor=null;
@@ -647,7 +647,10 @@ function updatePadUi(){
   pad.querySelector(".k8-pad-next").textContent=left?"Далее":"Готово";
   if(k8PadShownFor!==activePadPlayer){k8PadShownFor=activePadPlayer;requestAnimationFrame(()=>k8ScrollRowAbovePad(row,pad))}
 }
-function k8ScrollRowAbovePad(row,pad){if(!row||!pad)return;const r=row.getBoundingClientRect(),limit=window.innerHeight-pad.getBoundingClientRect().height-12,top=72;let delta=0;if(r.bottom+r.height*.7>limit)delta=r.bottom+r.height*.7-limit;else if(r.top<top)delta=r.top-top;if(Math.abs(delta)>2)window.scrollBy({top:delta,behavior:"smooth"})}
+function k8ScrollRowAbovePad(row,pad){if(!row||!pad)return;k8SyncViewport();const r=row.getBoundingClientRect(),limit=pad.getBoundingClientRect().top-12,top=72;let delta=0;if(r.bottom+r.height*.7>limit)delta=r.bottom+r.height*.7-limit;else if(r.top<top)delta=r.top-top;if(Math.abs(delta)>2)window.scrollBy({top:delta,behavior:"smooth"})}
+function k8SyncViewport(){const vv=window.visualViewport;if(!vv)return;const gap=Math.max(0,Math.round(window.innerHeight-vv.height-vv.offsetTop));document.documentElement.style.setProperty("--k8-vv-bottom",gap+"px")}
+if(window.visualViewport){visualViewport.addEventListener("resize",k8SyncViewport);visualViewport.addEventListener("scroll",k8SyncViewport)}
+document.addEventListener("touchmove",e=>{if(e.target.closest?.(".k8-pad"))e.preventDefault()},{passive:false});
 function commitPad(input){if(input&&draftSaveTimers.has(input.dataset.draftPlayer))input.dispatchEvent(new Event("change",{bubbles:true}))}
 function padPress(key){
   const input=activePadPlayer&&document.querySelector(`[data-draft-player="${activePadPlayer}"]`);
@@ -1047,7 +1050,7 @@ root.addEventListener("submit", (event) => {
   if(event.target.id==="import-game-form"){captureImportValues();const rounds=[];for(let i=0;i<manualImport.roundCount;i++){const row={};let any=false,all=true;for(const id of manualImport.profileIds){const v=manualImport.values[`r${i}-${id}`]??"";if(v!==""){any=true;row[id]=Number(v)}else all=false}if(any&&!all){showToast(`Заполните весь раунд ${i+1}`,"error");manualImport.roundIndex=i;render();return}if(any)rounds.push(row)}if(!rounds.length){showToast(manualImport.quick?"Заполните итоги":"Добавьте хотя бы один раунд","error");return}const mode=manualImport.quick?"totals":"rounds";mutate(async()=>{const result=await api.importGame(`${manualImport.date}T12:00:00`,manualImport.profileIds,rounds,mode);clearImportDraft();return result},"Прошлая партия добавлена");return}
   if (event.target.id === "player-form") { const name = new FormData(event.target).get("name")?.trim(); if (name) mutate(() => api.addPlayer(name, selectedEmoji), `${name} за столом`); }
   if(event.target.id==="edit-profile-form"){const profile=(state.knownPlayers||[]).find(x=>x.id===editingProfileId),name=new FormData(event.target).get("name")?.trim();if(!profile||!name)return;mutate(()=>api.updateProfile(profile.id,name,selectedEmoji,selectedAccent,selectedPattern,selectedAward),"Оформление профиля сохранено");}
-  if(event.target.id==="round-form"){if(roundSubmitInFlight||busy){showToast("Раунд уже сохраняется");return}if(!navigator.onLine){showToast("Подключитесь к интернету — черновик уже сохранён на устройстве","error");return}if(pendingWrites.length){showToast("Подождите, пока черновики синхронизируются","error");flushPending();return}roundSubmitInFlight=true;const gameId=state.currentGame.id,key=`korova-round-token-${roomCode}-${gameId}`;let token=localStorage.getItem(key);if(!token){token=crypto.randomUUID();localStorage.setItem(key,token)}mutate(async()=>{const result=await api.finalizeRound(token);localStorage.removeItem(key);return result},"Раунд завершён").finally(()=>{roundSubmitInFlight=false;refreshDraftUi()});return}
+  if(event.target.id==="round-form"){if(roundSubmitInFlight||busy){showToast("Раунд уже сохраняется");return}if(!navigator.onLine){showToast("Подключитесь к интернету — черновик уже сохранён на устройстве","error");return}if(pendingWrites.length){showToast("Подождите, пока черновики синхронизируются","error");flushPending();return}roundSubmitInFlight=true;const gameId=state.currentGame.id,key=`korova-round-token-${roomCode}-${gameId}`;let token=localStorage.getItem(key);if(!token){token=crypto.randomUUID();localStorage.setItem(key,token)}mutate(async()=>{const result=await api.finalizeRound(token);localStorage.removeItem(key);return result},"Раунд завершён").then(ok=>{if(ok)setTimeout(()=>{const e=document.querySelector("#k8-entry");if(e)window.scrollTo({top:e.getBoundingClientRect().top+window.scrollY-12,behavior:"smooth"})},80)}).finally(()=>{roundSubmitInFlight=false;refreshDraftUi()});return}
   if (event.target.id === "edit-round-form") { const form=new FormData(event.target),scores={};for(const player of state.currentGame.players){const raw=form.get(player.id);if(raw===""||raw==null||Number(raw)<0||!Number.isInteger(Number(raw))){showToast(`Укажите очки для ${player.name}`,"error");return}scores[player.id]=Number(raw)}mutate(()=>api.updateRound(editingRoundId,scores),"Результат раунда исправлен"); }
 });
 

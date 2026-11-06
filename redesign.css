@@ -353,3 +353,13 @@ html:has(body.k8-modal-open),body.k8-modal-open{overflow:hidden!important;oversc
 .k8-pad-keys .k8-pad-next:active{background:var(--k-yellow)}
 .k8-pad-keys .k8-pad-back:active{background:#3f7d69}
 body.k8-pad-open .app-shell{padding-bottom:220px!important}
+
+/* ===== v8.3: клавиатура снова 3×4, но компактная ===== */
+.k8-pad{bottom:var(--k8-vv-bottom,0px);touch-action:none;overscroll-behavior:contain;gap:8px;padding:10px 12px calc(10px + env(safe-area-inset-bottom))}
+.k8-pad-keys{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.k8-pad-keys button{height:46px;font-size:20px;border-radius:12px}
+.k8-pad-keys .k8-pad-next{font-size:14px;padding:0}
+.k8-pad-head{min-height:40px}
+.k8-pad-value{font-size:28px;min-width:40px}
+body.k8-pad-open .app-shell{padding-bottom:300px!important}
+@media(max-height:700px){.k8-pad-keys button{height:42px}.k8-pad-keys{gap:5px}}
