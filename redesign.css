@@ -540,3 +540,7 @@ body.k8-modal-open .toast{top:16px!important;bottom:auto!important}
 .k8-luck-stats{margin:6px 0 10px;font-size:13px;color:#4f4326}
 .k8-lucky{align-items:center}
 .k8-fate{margin:8px auto 0;padding:8px 12px;border-radius:12px;background:#201e1b;color:#fff4bd;font-size:14px;max-width:440px}
+
+/* ===== v8.9.1 ===== */
+.k8-prof-body{flex:1 0 auto!important;min-height:auto!important;padding-bottom:12px}
+.k8-tip.up>div{top:auto;bottom:32px}

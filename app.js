@@ -18,7 +18,7 @@ const DEFAULT_PROFILE_PATTERNS=PROFILE_PATTERNS.filter(x=>x.id!=="none");
 const K8_EXTRA_PALETTES=[{id:"rose",name:"Роза",color:"#d9466f",soft:"#ffdbe5",need:{wins:5}},{id:"gold",name:"Золото",color:"#e3b23c",soft:"#fff0c2",need:{wins:15}},{id:"midnight",name:"Полночь",color:"#3d4f9f",soft:"#dde3ff",need:{games:30}},{id:"neon",name:"Неон",color:"#18b98a",soft:"#c9f7e6",need:{games:50}}];
 const K8_EXTRA_PATTERNS=[{id:"clover",name:"Клевер",need:{wins:1}},{id:"spots",name:"Коровьи пятна",need:{games:10}},{id:"horseshoe",name:"Подковы",need:{wins:5}},{id:"straw",name:"Солома",need:{games:25}},{id:"plaid",name:"Скатерть",need:{games:50}},{id:"stars",name:"Звёзды",need:{wins:15}}];
 const K8_ALL_PALETTES=[...PROFILE_PALETTES,...K8_EXTRA_PALETTES],K8_ALL_PATTERNS=[...PROFILE_PATTERNS,...K8_EXTRA_PATTERNS];
-const APP_VERSION = "8.9.0";
+const APP_VERSION = "8.9.1";
 const LIMIT = 10;
 const WIN_LINE = 66;
 const root = document.querySelector("#app");
@@ -687,6 +687,7 @@ function k8SyncViewport(){const vv=window.visualViewport;if(!vv)return;const gap
 if(window.visualViewport){visualViewport.addEventListener("resize",k8SyncViewport);visualViewport.addEventListener("scroll",k8SyncViewport)}
 document.addEventListener("touchmove",e=>{if(e.target.closest?.(".k8-pad"))e.preventDefault()},{passive:false});
 document.addEventListener("keydown",e=>{if(e.key!=="Enter")return;const input=e.target.closest?.("[data-draft-player]");if(!input||input.readOnly)return;e.preventDefault();input.dispatchEvent(new Event("change",{bubbles:true}));const list=[...document.querySelectorAll("[data-draft-player]")],i=list.indexOf(input),next=list.slice(i+1).concat(list.slice(0,i)).find(x=>x.value==="");if(next)next.focus();else{input.blur();document.querySelector(".k8-submit")?.focus()}});
+document.addEventListener("toggle",e=>{const d=e.target;if(!d.classList?.contains("k8-tip")||!d.open)return;const pop=d.querySelector(":scope>div");if(!pop)return;d.classList.remove("up");const box=d.closest(".modal")||document.documentElement,limit=Math.min(window.innerHeight,box.getBoundingClientRect().bottom)-90,r=pop.getBoundingClientRect();if(r.bottom>limit&&d.getBoundingClientRect().top-r.height-12>Math.max(0,box.getBoundingClientRect().top))d.classList.add("up")},true);
 function commitPad(input){if(input&&draftSaveTimers.has(input.dataset.draftPlayer))input.dispatchEvent(new Event("change",{bubbles:true}))}
 function padPress(key){
   const input=activePadPlayer&&document.querySelector(`[data-draft-player="${activePadPlayer}"]`);
