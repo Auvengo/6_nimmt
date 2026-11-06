@@ -1,4 +1,4 @@
-const CACHE='korova-v9.3.0';
+const CACHE='korova-v9.3.1';
 const ASSETS=['/','/index.html','/styles.css','/redesign.css','/app.js','/manifest.webmanifest','/favicon.svg','/icons/icon-192.png','/icons/icon-512.png','/version.json'];
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(cache=>Promise.allSettled(ASSETS.map(asset=>cache.add(asset))))));
 self.addEventListener('message',event=>{if(event.data?.type==='SKIP_WAITING')self.skipWaiting()});

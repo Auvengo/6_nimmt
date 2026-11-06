@@ -1075,3 +1075,15 @@ body.tv-mode .tv-roster-player:after{opacity:.12!important}
 .k8-cpick-chips::-webkit-scrollbar-thumb{background:rgba(255,255,255,.12)!important}
 @media(max-width:760px){.premium-profile .profile-strengths article b{font-size:15px!important;white-space:normal!important;max-width:150px;line-height:1.2}}
 .premium-profile .profile-titles>summary,.premium-profile .profile-achievements>summary{font-size:15px!important}
+
+/* ===== v9.3.1: кнопки карточки игрока ===== */
+.premium-profile>header>.profile-edit-identity{display:none!important}
+.k8-pc-avwrap{position:relative;flex:0 0 auto;display:inline-block}
+.k8-pc-edit{position:absolute;right:-4px;bottom:-4px;z-index:3;width:36px;height:36px;border-radius:50%;border:3px solid #0b231c;background:var(--k-yellow);color:var(--k-ink);display:grid;place-items:center;cursor:pointer;padding:0;box-shadow:0 2px 6px rgba(0,0,0,.4)}
+.k8-pc-edit .ui-icon{width:16px;height:16px}
+.k8-pc-edit:hover{background:var(--k-yellow2)}
+.premium-profile .profile-sticky-actions{gap:12px!important;align-items:center}
+.premium-profile .profile-sticky-compare{min-height:38px!important;padding:0 14px!important;border-radius:12px!important;border:0!important;background:var(--k-yellow)!important;color:var(--k-ink)!important;font-weight:800!important}
+.premium-profile .profile-sticky-compare:hover{background:var(--k-yellow2)!important}
+.premium-profile .profile-close{width:38px!important;height:38px!important;border-radius:12px!important;border:1px solid var(--k-line)!important;background:var(--k-bg)!important;color:var(--k-text)!important}
+@media(max-width:760px){.k8-pc-edit{width:32px;height:32px;right:-6px;bottom:-6px}.premium-profile>header>.profile-identity-summary{flex:1 1 0!important}}
