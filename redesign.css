@@ -630,3 +630,29 @@ body.tv-mode{background:var(--k-bg)!important}
 .k8-win>*{flex-shrink:0}
 .k8-win-list li b{text-align:left}
 .k8-winner{text-align:left}
+
+/* ===== v9.0.1 ===== */
+/* Живой эмодзи всегда занимает весь круг аватара */
+.k8-av>.k8-face{position:absolute;inset:0;width:auto;height:auto;place-self:auto}
+.k8-face .k8-live{left:12%;top:12%;width:76%;height:76%}
+/* Корона — по центру над аватаром, с лёгким наклоном */
+.k8-av .k8-av-crown{top:auto!important;right:auto!important;left:50%!important;bottom:calc(100% - 9%);width:48%!important;height:auto!important;aspect-ratio:30/22;transform:translateX(-50%) rotate(-10deg);z-index:2}
+.k8-av .k8-av-crown .k8-crown{width:100%!important;height:100%!important}
+/* Событие раунда на ТВ — в новом стиле */
+body.tv-mode .tv-event-layer{background:rgba(7,26,20,.55)!important;backdrop-filter:blur(6px)}
+body.tv-mode .tv-event{position:relative!important;top:auto!important;left:auto!important;right:auto!important;margin:0 auto!important;max-width:min(1100px,80vw);padding:3vh 3vw!important;border:2px solid var(--k-line)!important;border-radius:2vw!important;background:var(--k-card)!important;color:var(--k-text)!important;box-shadow:0 30px 80px rgba(0,0,0,.5)!important;display:flex!important;flex-direction:column;align-items:center;text-align:center;gap:1.2vh!important}
+body.tv-mode .tv-event>span{width:clamp(70px,6vw,120px);height:clamp(70px,6vw,120px);display:grid;place-items:center;border-radius:50%;background:var(--k-yellow);font-size:clamp(40px,3.6vw,72px)!important}
+body.tv-mode .tv-event div{display:flex!important;flex-direction:column;align-items:center;gap:1vh}
+body.tv-mode .tv-event small{font-size:clamp(12px,1vw,20px)!important;letter-spacing:.14em;color:var(--k-yellow2)!important}
+body.tv-mode .tv-event b{font-family:var(--k-display);font-weight:800;font-size:clamp(28px,3vw,60px)!important;line-height:1.1;color:#fff!important}
+body.tv-mode .tv-event p{font-size:clamp(16px,1.6vw,32px)!important;color:var(--k-soft)!important}
+body.tv-mode .tv-event.record>span,body.tv-mode .tv-event.heavy>span,body.tv-mode .tv-event.warning>span{background:var(--k-coral)}
+body.tv-mode .tv-event.record,body.tv-mode .tv-event.warning{border-color:var(--k-coral)!important}
+/* ТВ перед первым раундом — тёмная тема */
+body.tv-mode .tv-wait{background:var(--k-card)!important;border:2px solid var(--k-line)!important;color:var(--k-text)!important;box-shadow:none!important}
+body.tv-mode .tv-wait h1{font-family:var(--k-display);font-weight:800;color:#fff!important}
+body.tv-mode .tv-wait>div>small,body.tv-mode .tv-roster-shell>small{color:var(--k-yellow2)!important}
+body.tv-mode .tv-wait p{color:var(--k-soft)!important}
+body.tv-mode .tv-roster-player{background:var(--k-card2)!important;border:2px solid var(--k-line2)!important;color:var(--k-text)!important;box-shadow:none!important}
+body.tv-mode .tv-roster-player b{color:var(--k-text)!important}
+body.tv-mode .tv-roster-player:after{opacity:.12!important}
