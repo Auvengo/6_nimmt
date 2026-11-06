@@ -505,3 +505,38 @@ body.k8-modal-open .toast{top:16px!important;bottom:auto!important}
 .k8-emoji-icons button.on{background:var(--k-ink);box-shadow:0 0 0 2px var(--k-yellow) inset}
 .k8-emoji-title{margin:0 2px 8px;font-size:13px;font-weight:800;color:var(--k-ink)}
 .k8-emoji-title small{font-weight:600;color:#8f8670;margin-left:4px}
+
+/* ===== v8.9: карта удачи ===== */
+.k8-av>.k8-face{place-self:stretch}
+.k8-card{--c1:#fffdf5;--c2:#efe6cc;--ink:#201e1b;position:relative;width:58px;height:82px;border-radius:9px;border:2px solid var(--ink);background:linear-gradient(160deg,var(--c1),var(--c2));box-shadow:3px 3px 0 var(--ink);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:0;overflow:hidden;color:var(--ink)}
+.k8-card:before{content:"";position:absolute;inset:4px;border-radius:5px;border:1.5px solid rgba(32,30,27,.22);pointer-events:none}
+.k8-card:after{content:"";position:absolute;inset:0;background:linear-gradient(115deg,rgba(255,255,255,.55) 0 18%,transparent 34%);pointer-events:none}
+.k8-card b{position:relative;z-index:1;font-family:var(--k-display);font-weight:800;font-size:22px;line-height:1;letter-spacing:-.03em;-webkit-text-stroke:0;text-shadow:1px 1px 0 rgba(255,255,255,.7)}
+.k8-card small{position:absolute;font-size:8px;font-weight:800;line-height:1;opacity:.7}
+.k8-card .k8-c-tl{left:7px;top:6px}
+.k8-card .k8-c-br{right:7px;bottom:6px;transform:rotate(180deg)}
+.k8-c-heads{position:relative;z-index:1;display:flex;flex-wrap:wrap;justify-content:center;gap:1px 2px;max-width:46px;font-style:normal}
+.k8-c-heads em{display:block;width:11px;height:9px;color:var(--ink)}
+.k8-c-heads em svg{width:100%;height:100%;display:block}
+.k8-card.heads-1{--c1:#fffdf5;--c2:#eee5ca}
+.k8-card.heads-2{--c1:#e3f0ff;--c2:#a9cdf5}
+.k8-card.heads-3{--c1:#fff3c2;--c2:#f4c84a}
+.k8-card.heads-5{--c1:#ffd9d1;--c2:#e8806f}
+.k8-card.heads-7{--c1:#efdcff;--c2:#ad7fe0}
+.k8-card-empty{border-style:dashed;box-shadow:none;background:#fffdf5}
+.k8-card-empty b{color:#a39a82}
+.k8-card-empty:before,.k8-card-empty:after{display:none}
+.k8-card-prev{transform:rotate(6deg)}
+.k8-card-win{transform:rotate(-6deg) scale(1.1)}
+.k8-lucky-preview .k8-card{transform:rotate(-4deg)}
+.k8-lucky-head{display:flex;align-items:center;gap:8px;margin-top:6px}
+.k8-lucky-head .field-label{margin:0}
+.k8-tip{position:relative}
+.k8-tip summary{list-style:none;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;background:var(--k-ink);color:var(--k-yellow2);font-weight:800;font-size:13px;cursor:pointer}
+.k8-tip summary::-webkit-details-marker{display:none}
+.k8-tip>div{position:absolute;left:-60px;top:32px;z-index:6;width:min(300px,78vw);padding:12px 14px;border-radius:12px;background:var(--k-ink);color:#fff4bd;font-size:13px;line-height:1.45;box-shadow:0 10px 24px rgba(0,0,0,.35)}
+.k8-tip>div p{margin:6px 0 0}
+.k8-tip>div b{color:#fff}
+.k8-luck-stats{margin:6px 0 10px;font-size:13px;color:#4f4326}
+.k8-lucky{align-items:center}
+.k8-fate{margin:8px auto 0;padding:8px 12px;border-radius:12px;background:#201e1b;color:#fff4bd;font-size:14px;max-width:440px}
