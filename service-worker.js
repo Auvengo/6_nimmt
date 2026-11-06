@@ -1,5 +1,5 @@
-const CACHE='korova-v7.1.3';
-const ASSETS=['/','/index.html','/styles.css','/app.js','/manifest.webmanifest','/favicon.svg','/icons/icon-192.png','/icons/icon-512.png','/version.json'];
+const CACHE='korova-v8.0.0';
+const ASSETS=['/','/index.html','/styles.css','/redesign.css','/app.js','/manifest.webmanifest','/favicon.svg','/icons/icon-192.png','/icons/icon-512.png','/version.json'];
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(cache=>Promise.allSettled(ASSETS.map(asset=>cache.add(asset))))));
 self.addEventListener('message',event=>{if(event.data?.type==='SKIP_WAITING')self.skipWaiting()});
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key!==CACHE).map(key=>caches.delete(key)))).then(()=>self.clients.claim())));
