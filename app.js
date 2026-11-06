@@ -14,7 +14,7 @@ const PROFILE_PALETTES=[
 ];
 const PROFILE_PATTERNS=[{id:"none",name:"Без узора"},{id:"dots",name:"Крапинки"},{id:"stripes",name:"Полосы"},{id:"diamonds",name:"Ромбики"},{id:"waves",name:"Волны"}];
 const DEFAULT_PROFILE_PATTERNS=PROFILE_PATTERNS.filter(x=>x.id!=="none");
-const APP_VERSION = "8.3.0";
+const APP_VERSION = "8.4.0";
 const LIMIT = 10;
 const WIN_LINE = 66;
 const root = document.querySelector("#app");
@@ -651,6 +651,7 @@ function k8ScrollRowAbovePad(row,pad){if(!row||!pad)return;k8SyncViewport();cons
 function k8SyncViewport(){const vv=window.visualViewport;if(!vv)return;const gap=Math.max(0,Math.round(window.innerHeight-vv.height-vv.offsetTop));document.documentElement.style.setProperty("--k8-vv-bottom",gap+"px")}
 if(window.visualViewport){visualViewport.addEventListener("resize",k8SyncViewport);visualViewport.addEventListener("scroll",k8SyncViewport)}
 document.addEventListener("touchmove",e=>{if(e.target.closest?.(".k8-pad"))e.preventDefault()},{passive:false});
+document.addEventListener("keydown",e=>{if(e.key!=="Enter")return;const input=e.target.closest?.("[data-draft-player]");if(!input||input.readOnly)return;e.preventDefault();input.dispatchEvent(new Event("change",{bubbles:true}));const list=[...document.querySelectorAll("[data-draft-player]")],i=list.indexOf(input),next=list.slice(i+1).concat(list.slice(0,i)).find(x=>x.value==="");if(next)next.focus();else{input.blur();document.querySelector(".k8-submit")?.focus()}});
 function commitPad(input){if(input&&draftSaveTimers.has(input.dataset.draftPlayer))input.dispatchEvent(new Event("change",{bubbles:true}))}
 function padPress(key){
   const input=activePadPlayer&&document.querySelector(`[data-draft-player="${activePadPlayer}"]`);
@@ -661,7 +662,7 @@ function padPress(key){
   input.value=v;input.dispatchEvent(new Event("input",{bubbles:true}));updateRowProjection(input);updatePadUi();
 }
 document.addEventListener("click",event=>{
-  const key=event.target.closest("[data-pad-key]");if(key){event.preventDefault();padPress(key.dataset.padKey);return}
+  const key=event.target.closest("[data-pad-key]");if(key){event.preventDefault();try{navigator.vibrate?.(8)}catch{}padPress(key.dataset.padKey);return}
   if(!K8_COARSE)return;const row=event.target.closest("[data-pad-player]");if(!row)return;event.preventDefault();
   const prev=activePadPlayer&&document.querySelector(`[data-draft-player="${activePadPlayer}"]`);if(prev&&activePadPlayer!==row.dataset.padPlayer)commitPad(prev);
   activePadPlayer=row.dataset.padPlayer;updatePadUi();

@@ -363,3 +363,24 @@ body.k8-pad-open .app-shell{padding-bottom:220px!important}
 .k8-pad-value{font-size:28px;min-width:40px}
 body.k8-pad-open .app-shell{padding-bottom:300px!important}
 @media(max-height:700px){.k8-pad-keys button{height:42px}.k8-pad-keys{gap:5px}}
+
+/* ===== v8.4 ===== */
+/* Без системной синей подсветки нажатий; свой отклик */
+html{-webkit-tap-highlight-color:transparent}
+button,a,label,input,summary{-webkit-tap-highlight-color:transparent}
+.k8-pad-keys button:focus,.k8-pad-close:focus{outline:none}
+.k8-pad-keys button:focus-visible,.k8-pad-close:focus-visible{outline:2px solid var(--k-yellow);outline-offset:2px}
+.k8-pad-keys button{transition:background-color .08s,transform .08s;user-select:none;-webkit-user-select:none}
+.k8-pad-keys button:active{background:#2f7a60;transform:scale(.96)}
+.k8-pad-keys .k8-pad-back:active{background:#3f8a72}
+.k8-pad-keys .k8-pad-next:active{background:#e8b83a}
+.k8-entry .score-row{-webkit-user-select:none;user-select:none}
+.k8-entry .score-row:active{background:#1f4a3c}
+/* Прочерк исчезает, когда поле в фокусе */
+.k8-entry .number-wrap input:focus::placeholder{color:transparent}
+.k8-entry .number-wrap:focus-within{background:var(--k-yellow)}
+.k8-entry .number-wrap:focus-within input{color:var(--k-ink)}
+.k8-entry .score-row:focus-within{border-color:var(--k-yellow)}
+.k8-entry .number-wrap input:focus{outline:none}
+/* Компьютер: блок ввода не «плавает» и не наезжает на таблицу */
+@media(min-width:1000px){.k8-live>.k8-entry{position:static!important}}
