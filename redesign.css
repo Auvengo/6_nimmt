@@ -498,3 +498,10 @@ footer .k8-credit:hover{color:rgba(255,255,255,.7)}
 @media(max-width:760px){.room-tools .tv-open,.room-tools .admin-pill,.room-tools .update-check{font-size:18px!important;line-height:1!important;color:var(--k-text)!important}}
 
 body.k8-modal-open .toast{top:16px!important;bottom:auto!important}
+
+/* ===== v8.8: группы эмодзи без горизонтальной прокрутки ===== */
+.k8-emoji-icons{display:grid!important;grid-template-columns:repeat(var(--n,6),minmax(0,1fr));gap:6px;overflow:visible!important;padding-bottom:0!important;margin-bottom:6px!important}
+.k8-emoji-icons button{justify-content:center;min-height:46px;padding:0!important;border-radius:12px!important;font-size:22px!important}
+.k8-emoji-icons button.on{background:var(--k-ink);box-shadow:0 0 0 2px var(--k-yellow) inset}
+.k8-emoji-title{margin:0 2px 8px;font-size:13px;font-weight:800;color:var(--k-ink)}
+.k8-emoji-title small{font-weight:600;color:#8f8670;margin-left:4px}
