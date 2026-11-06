@@ -776,3 +776,302 @@ body.tv-mode .tv-roster-player:after{opacity:.12!important}
 .archive-game-modal .archive-game-top h2{font-size:clamp(20px,5vw,26px)!important;line-height:1.15}
 .archive-game-modal .archive-game-top .k8-arch-tag{font-size:12px}
 @media(max-width:760px){.k8-arch-hero p{display:none}.k8-arch-hero h1{font-size:28px}}
+
+/* ===== v9.2: статистика в тёмной теме ===== */
+.k8-stats{gap:14px;padding:0!important;min-height:0!important;background:transparent!important}
+.k8-stats .stats2-hero{margin:0!important;border-radius:20px!important;background:var(--k-card)!important;border:1px solid var(--k-line)!important;color:var(--k-text)!important;padding:18px!important;box-shadow:none!important}
+.k8-stats .stats2-hero:before,.k8-stats .stats2-hero:after{display:none!important}
+.k8-stats-title{display:flex;align-items:center;gap:10px}
+.k8-stats .stats2-hero h1{font-family:var(--k-display);font-weight:800;color:#fff!important;font-size:clamp(26px,4vw,40px)!important;margin:4px 0!important;letter-spacing:-.02em}
+.k8-stats .stats2-hero p{color:var(--k-soft)!important;margin:0 0 12px!important}
+.k8-stats .elo-help{background:var(--k-bg)!important;color:var(--k-yellow2)!important;border:1px solid var(--k-line)!important}
+.k8-stats .elo-help-popover{background:var(--k-paper)!important;color:var(--k-ink)!important;border-radius:14px!important}
+.k8-stats .stats2-controls{display:flex!important;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;margin:0!important}
+.k8-stabs{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr));min-width:min(100%,360px);background:var(--k-bg)!important;border:0!important;position:static!important}
+.k8-stabs button{color:var(--k-soft)!important;background:transparent!important;border:0!important;box-shadow:none!important;min-height:40px!important}
+.k8-stabs button.active{background:var(--k-yellow)!important;color:var(--k-ink)!important}
+.k8-periods{display:flex!important;gap:4px!important;padding:4px;border-radius:12px;background:var(--k-bg);margin:0!important}
+.k8-periods button{min-height:36px!important;padding:0 12px!important;border:0!important;border-radius:9px!important;background:transparent!important;color:var(--k-soft)!important;font-weight:700!important;font-size:13px!important;box-shadow:none!important}
+.k8-periods button.active{background:var(--k-line)!important;color:#fff!important}
+/* Таблица */
+.k8-stats .stats2-players,.k8-stats .stats2-overview,.k8-stats .stats2-compare{padding:0!important;margin:0!important;background:transparent!important}
+.k8-stats .stats2-table-heading{padding:0 4px 8px!important;display:flex;justify-content:space-between;align-items:baseline}
+.k8-stats .stats2-table-heading strong{font-family:var(--k-display);font-size:15px;color:var(--k-text)!important;letter-spacing:0!important;text-transform:none!important}
+.k8-stats .stats-form-note{color:var(--k-muted)!important}
+.k8-stats .stats-table-wrap{margin:0!important;border:1px solid var(--k-line2)!important;border-radius:16px!important;background:var(--k-card2)!important;box-shadow:none!important}
+.k8-stats .stats-table{color:var(--k-text)!important;background:transparent!important}
+.k8-stats .stats-table th{background:var(--k-card)!important;color:var(--k-muted)!important;font-size:11px!important;text-transform:uppercase;letter-spacing:.06em;border-color:var(--k-line2)!important}
+.k8-stats .stats-table td{border-color:var(--k-line2)!important;background:transparent!important;color:var(--k-text)!important}
+.k8-stats .stats-table tbody tr:hover td{background:rgba(255,255,255,.03)!important}
+.k8-stats .stats-table td small{color:var(--k-muted)!important}
+.k8-stats .stat-player{background:transparent!important;border:0!important;box-shadow:none!important;color:var(--k-text)!important;display:flex!important;align-items:center;gap:10px}
+.k8-stats .stat-player:after{display:none!important}
+.k8-stats .stat-player b{color:var(--k-text)!important}
+.k8-stats .stat-rank{color:var(--k-muted)!important}
+.k8-stats .stat-player .k8-av{width:36px;height:36px;font-size:19px}
+.k8-stats .elo-number{color:#fff!important;font-family:var(--k-display)}
+.k8-stats .elo-change.up{background:rgba(127,214,164,.15)!important;color:var(--k-good)!important}
+.k8-stats .elo-change.down{background:rgba(224,112,95,.15)!important;color:#ffb4a8!important}
+.k8-stats .elo-change.neutral{background:var(--k-bg)!important;color:var(--k-muted)!important}
+.k8-stats .elo-change.opened{background:var(--k-yellow)!important;color:var(--k-ink)!important}
+.k8-stats .elo-calibration b{color:var(--k-yellow2)!important}.k8-stats .elo-calibration small{color:var(--k-muted)!important}
+.k8-stats .stats-form-dots i{border:0!important;color:var(--k-ink)!important}
+.k8-stats .stats-form-dots i.good{background:var(--k-good)!important}
+.k8-stats .stats-form-dots i.mid{background:var(--k-yellow2)!important}
+.k8-stats .stats-form-dots i.bad{background:#ffb4a8!important}
+.k8-stats .stats-help{background:var(--k-card2)!important;border:1px solid var(--k-line2)!important;border-radius:14px!important;color:var(--k-text)!important;margin:12px 0 0!important}
+.k8-stats .stats-help summary{color:var(--k-yellow2)!important}
+.k8-stats .stats-help dt{color:#fff!important}.k8-stats .stats-help dd{color:var(--k-soft)!important}
+/* Мобильная таблица */
+.k8-stats .stats-mobile{padding:0!important}
+.k8-stats .stats2-podium{gap:8px!important;padding:0!important;background:transparent!important}
+.k8-stats .stats2-podium>button{background:var(--k-card)!important;border:1px solid var(--k-line)!important;border-radius:18px!important;color:var(--k-text)!important;box-shadow:none!important}
+.k8-stats .stats2-podium>button:after{opacity:.08!important}
+.k8-stats .stats2-podium .place-1{border-color:var(--k-yellow)!important;background:radial-gradient(circle at 50% 0,rgba(244,200,74,.25),transparent 70%),var(--k-card)!important}
+.k8-stats .stats2-podium b,.k8-stats .podium-elo{color:#fff!important}
+.k8-stats .podium-elo small,.k8-stats .podium-meta{color:var(--k-muted)!important}
+.k8-stats .podium-place{background:var(--k-yellow)!important;color:var(--k-ink)!important;border:0!important}
+.k8-stats .stats2-podium .k8-av-lg{width:54px;height:54px;font-size:30px;margin:6px auto 4px}
+.k8-stats .stats2-ranking{gap:6px!important;padding:0!important;margin-top:8px!important}
+.k8-stats .stats2-player-card{background:var(--k-card2)!important;border:1px solid var(--k-line2)!important;border-radius:14px!important;color:var(--k-text)!important;box-shadow:none!important}
+.k8-stats .stats2-player-card:after{opacity:.06!important}
+.k8-stats .stats2-player-card b{color:var(--k-text)!important}.k8-stats .stats2-player-card small{color:var(--k-muted)!important}
+.k8-stats .mobile-elo b{color:#fff!important;font-family:var(--k-display)}
+.k8-stats .stats2-player-card .k8-av{width:38px;height:38px;font-size:20px}
+.k8-stats .elo-mobile-calibration{background:var(--k-card2)!important;border:1px dashed var(--k-line)!important;color:var(--k-text)!important;border-radius:14px!important}
+/* Обзор */
+.k8-stats .stats2-metrics{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px!important;padding:0!important;margin:0 0 14px!important}
+.k8-stats .stats2-metrics article{background:var(--k-card2)!important;border:1px solid var(--k-line2)!important;border-radius:16px!important;color:var(--k-text)!important;box-shadow:none!important;padding:14px!important}
+.k8-stats .stats2-metrics small{color:var(--k-muted)!important;letter-spacing:.08em}
+.k8-stats .stats2-metrics b{font-family:var(--k-display);font-weight:800;color:#fff!important;font-size:28px!important}
+.k8-stats .stats2-metrics span{color:var(--k-soft)!important}
+.k8-stats .record-book{margin:0 0 14px!important;border:1px solid var(--k-line)!important;border-radius:20px!important;background:var(--k-card2)!important;box-shadow:none!important;overflow:hidden}
+.k8-stats .record-book>header{background:var(--k-card)!important;border:0!important;padding:16px 18px!important;color:var(--k-text)!important}
+.k8-stats .record-book .eyebrow{color:var(--k-yellow2)!important}
+.k8-stats .record-book h2{font-family:var(--k-display);font-weight:800;color:#fff!important;font-size:22px!important}
+.k8-stats .record-book header small{color:var(--k-muted)!important}
+.k8-stats .record-grid{gap:1px!important;background:var(--k-line2)!important}
+.k8-stats .record-grid>button{background:var(--k-card2)!important;border:0!important;color:var(--k-text)!important;box-shadow:none!important}
+.k8-stats .record-grid>button:hover{background:#163d32!important}
+.k8-stats .record-grid i{width:40px;height:40px;display:grid!important;place-items:center;border-radius:50%;background:var(--k-bg);font-style:normal}
+.k8-stats .record-grid small{color:var(--k-yellow2)!important}
+.k8-stats .record-grid b{color:#fff!important}
+.k8-stats .record-grid em{color:var(--k-muted)!important}
+.k8-stats .record-grid strong{color:var(--k-yellow2)!important;font-family:var(--k-display)}
+/* Сравнение */
+.k8-stats .k8-compare-pickers{background:var(--k-card2);border:1px solid var(--k-line2);border-radius:18px;padding:14px!important;color:var(--k-text)}
+.k8-stats .k8-cpick-tools>span{color:#fff}
+.k8-stats .k8-sort{background:var(--k-bg)}.k8-stats .k8-sort button{color:var(--k-soft)}.k8-stats .k8-sort button.on{background:var(--k-yellow);color:var(--k-ink)}
+.k8-stats .k8-cpick-top>span{color:var(--k-muted)}
+.k8-stats .k8-cpick-top input{background:var(--k-bg);border-color:var(--k-line);color:var(--k-text)}
+.k8-stats .k8-cpick-top input:focus{outline:none;border-color:var(--k-yellow)}
+.k8-stats .k8-chip{background:var(--k-bg);border-color:var(--k-line);color:var(--k-text)}
+.k8-stats .k8-chip.on{background:var(--k-yellow);border-color:var(--k-yellow);color:var(--k-ink)}
+.k8-stats .compare-context b{color:var(--k-yellow2)!important}.k8-stats .compare-context span{color:var(--k-muted)!important}
+.k8-stats .compare-score{gap:8px!important}
+.k8-stats .compare-score>article{background:var(--k-card)!important;border:1px solid var(--k-line)!important;border-radius:18px!important;color:var(--k-text)!important;box-shadow:none!important}
+.k8-stats .compare-score>article:after{opacity:.08!important}
+.k8-stats .compare-score>article b{color:#fff!important}.k8-stats .compare-score>article strong{color:var(--k-yellow2)!important;font-family:var(--k-display)}
+.k8-stats .compare-score>article small{color:var(--k-muted)!important}
+.k8-stats .compare-score>div{background:var(--k-card2)!important;border:1px solid var(--k-line2)!important;border-radius:18px!important;color:var(--k-text)!important}
+.k8-stats .compare-score>div b{color:#fff!important}.k8-stats .compare-score>div small,.k8-stats .compare-score>div em{color:var(--k-muted)!important}
+.k8-stats .compare-score .k8-av-lg{margin:0 auto 6px}
+.k8-stats .compare-metrics{background:var(--k-card2)!important;border:1px solid var(--k-line2)!important;border-radius:16px!important;overflow:hidden}
+.k8-stats .compare-metrics>div{border-color:var(--k-line2)!important;background:transparent!important}
+.k8-stats .compare-metrics strong{color:#fff!important}.k8-stats .compare-metrics span{color:var(--k-muted)!important}
+.k8-stats .compare-recent button{background:var(--k-card2)!important;border:1px solid var(--k-line2)!important;color:var(--k-text)!important;border-radius:12px!important}
+.k8-stats .compare-recent b{color:var(--k-soft)!important}.k8-stats .compare-recent b.win{color:var(--k-good)!important}
+.k8-stats .stats2-section-head small{color:var(--k-yellow2)!important}.k8-stats .stats2-section-head h2{color:#fff!important}
+.k8-stats .stats2-no-compare{background:var(--k-card2)!important;border:1px dashed var(--k-line)!important;color:var(--k-soft)!important;border-radius:16px!important}
+.k8-stats .stats2-no-compare b{color:#fff!important}
+/* Награды (обзор) */
+.k8-stats .awards-hub,.k8-stats [class*="awards-hub"]{background:var(--k-card2)!important;border:1px solid var(--k-line2)!important;border-radius:20px!important;color:var(--k-text)!important;box-shadow:none!important}
+@media(max-width:760px){.k8-stats .stats2-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.k8-stats .stats2-controls{flex-direction:column;align-items:stretch}.k8-periods{justify-content:space-between}.k8-periods button{flex:1}}
+
+/* ===== v9.2: карточка игрока ===== */
+.premium-profile .premium-avatar.k8-av{width:96px!important;height:96px!important;border-radius:50%!important;font-size:52px!important;box-shadow:none;border:0!important;transform:none!important}
+.k8-pc-progress{display:flex;align-items:center;gap:14px;margin:12px 0;padding:12px 14px;border-radius:16px;background:rgba(0,0,0,.22);border:1px solid rgba(255,255,255,.1)}
+.k8-pc-frames{display:flex;gap:6px;flex:0 0 auto}
+.k8-pc-frames .k8-av{width:28px;height:28px;font-size:14px;opacity:.3;filter:grayscale(1)}
+.k8-pc-frames .k8-av.on{opacity:1;filter:none}
+.k8-pc-text{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+.k8-pc-text b{font-size:14px;color:#fff}
+.k8-pc-text small{font-size:12px;color:rgba(255,255,255,.7)}
+.k8-pc-text i{display:block;height:6px;border-radius:3px;background:rgba(255,255,255,.12);overflow:hidden;margin-top:3px}
+.k8-pc-text i em{display:block;height:100%;background:var(--k-yellow);border-radius:3px}
+@media(max-width:420px){.k8-pc-progress{flex-direction:column;align-items:flex-start}}
+/* Зал наград */
+.k8-stats .awards-shell{margin:0!important;border:1px solid var(--k-line)!important;border-radius:20px!important;background:var(--k-card2)!important;box-shadow:none!important;overflow:hidden;color:var(--k-text)}
+.k8-stats .awards-shell>summary{background:var(--k-card)!important;color:var(--k-text)!important;padding:16px 18px!important;border:0!important;display:flex!important;align-items:center;justify-content:space-between;cursor:pointer;list-style:none}
+.k8-stats .awards-shell>summary::-webkit-details-marker{display:none}
+.k8-stats .awards-shell>summary small{color:var(--k-yellow2)!important;letter-spacing:.12em;text-transform:uppercase;font-size:11px;font-weight:800;display:block}
+.k8-stats .awards-shell>summary b{font-family:var(--k-display);font-weight:800;color:#fff!important;font-size:20px}
+.k8-stats .awards-shell>summary em{font-style:normal;min-height:38px;padding:0 14px;display:inline-flex;align-items:center;border-radius:12px;background:var(--k-yellow)!important;color:var(--k-ink)!important;font-weight:800;font-size:13px;border:0!important}
+.k8-stats .awards-shell[open]>summary em{background:var(--k-bg)!important;color:var(--k-soft)!important}
+.k8-stats .awards-hub{background:transparent!important;border:0!important;padding:14px!important;color:var(--k-text)!important}
+.k8-stats .award-tabs{background:var(--k-bg)!important;border:0!important;border-radius:12px!important;padding:4px!important}
+.k8-stats .award-tabs button{background:transparent!important;color:var(--k-soft)!important;border:0!important;box-shadow:none!important;border-radius:9px!important}
+.k8-stats .award-tabs button.active{background:var(--k-yellow)!important;color:var(--k-ink)!important}
+.k8-stats .award-help{background:var(--k-bg)!important;color:var(--k-yellow2)!important;border:1px solid var(--k-line)!important}
+.k8-stats .award-help-popover{background:var(--k-paper)!important;color:var(--k-ink)!important}
+.k8-stats .title-row{background:var(--k-card)!important;border:1px solid var(--k-line2)!important;color:var(--k-text)!important;border-radius:14px!important;box-shadow:none!important}
+.k8-stats .title-row b{color:#fff!important}.k8-stats .title-row small,.k8-stats .title-row p,.k8-stats .title-row span{color:var(--k-soft)!important}
+.k8-stats .title-row .profile-avatar{background:var(--k-bg)!important;border:0!important;box-shadow:none!important}
+.k8-stats .permanent-holders-toggle{background:var(--k-bg)!important;color:var(--k-yellow2)!important;border:1px solid var(--k-line)!important}
+/* Сравнение на всю ширину */
+.k8-stats .stats2-compare{max-width:none!important}
+.k8-stats .awards-shell>summary em{font-size:0!important}
+.k8-stats .awards-shell>summary em:before{display:none!important}
+.k8-stats .awards-shell>summary em:after{content:"Показать"!important;font-size:13px!important;display:inline!important}
+.k8-stats .awards-shell[open]>summary em:after{content:"Свернуть"!important}
+.k8-stats .awards-hub>header{background:transparent!important;border:0!important;padding:0 0 10px!important}
+.k8-periods button{white-space:nowrap}
+.k8-stats .stats2-podium .k8-av-pod{width:48px!important;height:48px!important;font-size:26px!important;border-radius:50%!important;border:0!important;background:color-mix(in srgb,var(--pa,#1c5a47) 35%,#0b231c)!important;margin:4px auto!important}
+.k8-stats .stats2-podium .place-1>.k8-av-pod{margin:12px 0 0!important}
+.premium-profile .premium-avatar.k8-av{border-radius:50%!important;border:0!important;background:color-mix(in srgb,var(--pa,#1c5a47) 35%,#0b231c)!important}
+@media(max-width:760px){.premium-profile .premium-avatar.k8-av{width:66px!important;height:66px!important;font-size:36px!important;flex:0 0 66px}}
+.premium-profile>header{display:flex!important;align-items:center!important;gap:14px!important}
+.premium-profile>header>.premium-avatar{position:relative!important;inset:auto!important;transform:none!important;grid-area:auto!important}
+.premium-profile>header>.profile-identity-summary{flex:1;min-width:0}
+@media(max-width:760px){.premium-profile>header{flex-wrap:wrap}.premium-profile>header>.profile-edit-identity{margin-left:80px!important}}
+
+/* ===== v9.2.1 ===== */
+/* Вкладки статистики: без пустого хвоста */
+.k8-stabs{display:inline-flex!important;width:auto!important;min-width:0!important;max-width:100%;flex:0 0 auto}
+.k8-stabs button{flex:1 1 auto;padding:0 18px!important;white-space:nowrap}
+@media(max-width:760px){.k8-stabs{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr));width:100%!important}.k8-stabs button{padding:0 6px!important}}
+/* Подсказки «?» — тёмные и читаемые */
+.k8-stats .elo-help-popover,.k8-stats .award-help-popover{background:var(--k-ink)!important;color:var(--k-soft)!important;border:1px solid var(--k-line)!important;box-shadow:0 18px 40px rgba(0,0,0,.5)!important;border-radius:16px!important;padding:16px 18px!important;max-width:min(440px,86vw)}
+.k8-stats .elo-help-popover *,.k8-stats .award-help-popover *{color:inherit!important}
+.k8-stats .elo-help-popover b,.k8-stats .award-help-popover b,.k8-stats .elo-help-popover strong{color:var(--k-yellow2)!important;display:block;margin-top:10px}
+.k8-stats .elo-help-popover b:first-child,.k8-stats .award-help-popover b:first-child{margin-top:0}
+.k8-stats .elo-help-popover p,.k8-stats .elo-help-popover li,.k8-stats .award-help-popover p{color:var(--k-soft)!important;font-size:13px;line-height:1.45;margin:4px 0 0}
+.k8-stats .elo-help-popover:before,.k8-stats .elo-help-popover:after,.k8-stats .award-help-popover:before,.k8-stats .award-help-popover:after{border-bottom-color:var(--k-ink)!important;background:var(--k-ink)!important}
+/* Мобильный рейтинг: без белых уголков и фона */
+.k8-stats .stats2-ranking{background:transparent!important;border:0!important;box-shadow:none!important}
+.k8-stats .stats2-ranking>button:before,.k8-stats .stats2-ranking>button:after{display:none!important}
+.k8-stats .stats2-ranking>button.stats2-player-card>.k8-av{grid-column:2;grid-row:1/3;align-self:center}
+.k8-stats .stats2-podium>button:before{display:none!important}
+/* Ряды игроков в сравнении: место под полосой прокрутки */
+.k8-cpick-chips{padding-bottom:12px!important;scrollbar-width:thin;scrollbar-color:var(--k-line) transparent}
+.k8-cpick-chips::-webkit-scrollbar{height:4px}
+.k8-cpick-chips::-webkit-scrollbar-thumb{background:var(--k-line);border-radius:2px}
+.k8-cpick-chips::-webkit-scrollbar-track{background:transparent}
+.k8-stats .k8-cpick{gap:10px}
+
+/* ===== v9.2.2 ===== */
+/* Мобильный рейтинг: отступы между карточками и читаемая калибровка */
+.k8-stats .stats2-ranking{display:flex!important;flex-direction:column!important;gap:8px!important}
+.k8-stats .stats2-ranking>button{margin:0!important}
+.k8-stats .mobile-elo small,.k8-stats .mobile-elo>small{color:var(--k-yellow2)!important;opacity:1!important}
+.k8-stats .elo-mobile-calibration b{color:#fff!important}
+.k8-stats .elo-mobile-calibration small{color:var(--k-soft)!important}
+.k8-stats .stats2-player-card>small{color:var(--k-soft)!important}
+.k8-stats .stats2-player-card>em{color:var(--k-muted)!important;font-style:normal}
+/* Карточка игрока — единая тёмная тема, всё читаемо */
+.premium-profile .profile-elo-line small,.premium-profile .profile-elo-line span>small{color:var(--k-muted)!important}
+.premium-profile .profile-elo-line b{color:var(--k-yellow2)!important}
+.premium-profile .profile-elo-line.calibration b{color:var(--k-yellow2)!important}
+.premium-profile .profile-elo-line em{color:var(--k-soft)!important}
+.premium-profile .profile-elo-line em.up{color:var(--k-good)!important}.premium-profile .profile-elo-line em.down{color:#ffb4a8!important}
+.premium-profile .profile-main-stats strong{color:#fff!important}
+.premium-profile .profile-main-stats small,.premium-profile .profile-record{color:var(--k-soft)!important}
+.premium-profile .profile-record b{color:#fff!important}
+.premium-profile .profile-sticky-bar span{color:var(--k-yellow2)!important}
+.premium-profile .profile-sticky-compare,.premium-profile .profile-edit-identity{border-color:var(--k-line)!important;color:var(--k-text)!important;background:var(--k-bg)!important}
+/* «Что изменилось» */
+.premium-profile .profile-change{background:rgba(0,0,0,.22)!important;border:1px solid rgba(255,255,255,.1)!important;color:var(--k-text)!important;box-shadow:none!important}
+.premium-profile .profile-change *{color:var(--k-soft)}
+.premium-profile .profile-change small:first-child,.premium-profile .profile-change header small{color:var(--k-yellow2)!important}
+.premium-profile .profile-change b,.premium-profile .profile-change strong{color:#fff!important}
+.premium-profile .profile-change span.good,.premium-profile .profile-change span.bad,.premium-profile .profile-change span:not([class]){background:var(--k-card2)!important;border:1px solid var(--k-line2)!important;box-shadow:none!important}
+.premium-profile .profile-change span.good b,.premium-profile .profile-change span.good em{color:var(--k-good)!important}
+.premium-profile .profile-change span.bad b,.premium-profile .profile-change span.bad em{color:#ffb4a8!important}
+.premium-profile .profile-change span small{color:var(--k-muted)!important}
+/* Форма */
+.premium-profile .profile-form-summary{background:rgba(0,0,0,.22)!important;border:1px solid rgba(255,255,255,.1)!important;box-shadow:none!important}
+.premium-profile .profile-form-summary b{color:#fff!important}
+.premium-profile .profile-form-summary small,.premium-profile .profile-form-summary span{color:var(--k-soft)!important}
+.premium-profile .profile-form-summary.good b{color:var(--k-good)!important}
+.premium-profile .profile-form-summary.bad b{color:#ffb4a8!important}
+.premium-profile .sample-note{color:var(--k-muted)!important}
+.premium-profile .compact-heading small{color:var(--k-muted)!important}
+/* График — тёмный */
+.premium-profile .profile-chart{background:rgba(0,0,0,.22)!important;border:1px solid rgba(255,255,255,.1)!important;box-shadow:none!important}
+.premium-profile .profile-chart .profile-grid{stroke:rgba(255,255,255,.12)!important}
+.premium-profile .profile-chart polyline{stroke:var(--k-good)!important;stroke-width:4!important}
+.premium-profile .profile-chart circle{stroke:#0b231c!important}
+.premium-profile .profile-chart circle[fill="#176b55"]{fill:var(--k-good)!important}
+.premium-profile .profile-chart .profile-score-bg{fill:#0b231c!important;stroke:var(--k-line)!important}
+.premium-profile .profile-chart .profile-score{fill:#fff!important;font-weight:800}
+.premium-profile .profile-chart-legend span,.premium-profile .profile-time-axis span,.premium-profile .profile-time-axis b{color:var(--k-soft)!important}
+.premium-profile .profile-chart-legend b{color:var(--k-yellow2)!important}
+.premium-profile .profile-chart-legend i{background:var(--k-good)!important;border-color:#0b231c!important}
+.premium-profile .profile-chart-legend i.win{background:var(--k-yellow)!important}
+/* Сильные стороны */
+.premium-profile .profile-strengths article{background:rgba(0,0,0,.22)!important;border:1px solid rgba(255,255,255,.1)!important;box-shadow:none!important}
+.premium-profile .profile-strengths small{color:var(--k-yellow2)!important}
+.premium-profile .profile-strengths b{color:#fff!important}
+.premium-profile .profile-strengths p{color:var(--k-soft)!important}
+.premium-profile .profile-elo-summary{background:rgba(0,0,0,.22)!important;border:1px solid rgba(255,255,255,.1)!important}
+@media(max-width:760px){
+  .premium-profile>header>.profile-identity-summary{flex:1 1 calc(100% - 82px)!important}
+  .premium-profile>header>.profile-edit-identity{order:3;margin:0 0 0 80px!important;position:static!important}
+  .premium-profile .profile-chart .profile-score{font-size:17px!important}
+  .premium-profile .profile-chart .profile-score-bg{width:40px;height:22px;transform:translate(-5px,-4px)}
+}
+
+/* ===== v9.3 ===== */
+/* Калибровка — свёрнутый блок (телефон) */
+.k8-calib{margin-top:10px;border-radius:16px;border:1px dashed #3f7d69;background:var(--k-card2);overflow:hidden}
+.k8-calib>summary{display:flex;align-items:center;gap:10px;padding:12px 14px;cursor:pointer;list-style:none;color:var(--k-text)}
+.k8-calib>summary::-webkit-details-marker{display:none}
+.k8-calib>summary>span{flex:1;display:flex;flex-direction:column;gap:2px}
+.k8-calib>summary b{font-size:15px;color:#fff}
+.k8-calib>summary small{font-size:12px;color:var(--k-soft)}
+.k8-calib>summary i{font-style:normal;font-size:22px;color:var(--k-yellow2);transition:transform .15s}
+.k8-calib[open]>summary i{transform:rotate(90deg)}
+.k8-calib>div{display:flex;flex-direction:column;gap:2px;padding:0 8px 8px}
+.k8-calib>div>button{display:flex;align-items:center;gap:10px;min-height:48px;padding:4px 8px;border:0;border-radius:12px;background:transparent;color:var(--k-text);font:inherit;text-align:left;cursor:pointer}
+.k8-calib>div>button:hover{background:rgba(255,255,255,.04)}
+.k8-calib>div>button .k8-av{width:32px;height:32px;font-size:17px}
+.k8-calib>div>button b{flex:1;min-width:0;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.k8-calib>div>button small{min-width:28px;text-align:right;font-weight:800;color:var(--k-yellow2)}
+.k8-calib-bar{display:block;width:60px;height:6px;border-radius:3px;background:rgba(255,255,255,.12);overflow:hidden;flex:0 0 auto}
+.k8-calib-bar em{display:block;height:100%;background:var(--k-yellow);border-radius:3px}
+.k8-stats .elo-mobile-calibration{display:none!important}
+/* Калибровка в таблице (компьютер) */
+.k8-stats .k8-calib-sep td{background:var(--k-bg)!important;color:var(--k-yellow2)!important;font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;text-align:left!important;padding:10px 16px!important}
+.k8-stats .k8-calib-row td{opacity:.75}
+/* Карточка игрока: калибровка полоской */
+.k8-elo-calib{display:flex!important;align-items:center;gap:10px;flex-wrap:wrap}
+.k8-elo-calib .k8-calib-bar{width:80px}
+/* Оформление — в верхней панели на телефоне */
+.k8-edit-top{display:none!important}
+@media(max-width:760px){.k8-edit-top{display:inline-flex!important}.premium-profile>header>.profile-edit-identity{display:none!important}}
+/* Сильные стороны — столбиком на телефоне */
+@media(max-width:760px){
+  .premium-profile .profile-strengths{display:flex!important;flex-direction:column;gap:6px!important}
+  .premium-profile .profile-strengths article{display:grid!important;grid-template-columns:36px 1fr;align-items:center;text-align:left!important;padding:10px 12px!important;min-height:0!important}
+  .premium-profile .profile-strengths article>span{grid-row:1/3;font-size:24px}
+  .premium-profile .profile-strengths article>div{display:grid;grid-template-columns:1fr auto;column-gap:10px;align-items:baseline}
+  .premium-profile .profile-strengths article small{grid-column:1;font-size:11px!important}
+  .premium-profile .profile-strengths article b{grid-column:2;grid-row:1/3;font-size:18px!important;text-align:right;white-space:nowrap}
+  .premium-profile .profile-strengths article p{grid-column:1;margin:0!important;font-size:11px!important}
+}
+/* График: ожидание */
+.premium-profile .k8-chart-wait{padding:16px!important;border-radius:14px;border:1px dashed rgba(255,255,255,.18)!important;background:transparent!important;color:var(--k-soft)!important;text-align:center;font-size:13px}
+/* Титулы и достижения — раскрывающиеся плашки */
+.premium-profile .profile-titles,.premium-profile .profile-achievements{border:1px solid rgba(255,255,255,.12)!important;border-radius:14px!important;background:rgba(0,0,0,.22)!important;margin-top:8px!important;overflow:hidden}
+.premium-profile .profile-titles>summary,.premium-profile .profile-achievements>summary{display:flex!important;align-items:center;gap:10px;min-height:52px;padding:0 14px!important;cursor:pointer;list-style:none;color:#fff!important;font-weight:800;border:0!important}
+.premium-profile .profile-titles>summary::-webkit-details-marker,.premium-profile .profile-achievements>summary::-webkit-details-marker{display:none}
+.premium-profile .profile-titles>summary span,.premium-profile .profile-achievements>summary span{margin-left:auto}
+.premium-profile .profile-titles>summary:after,.premium-profile .profile-achievements>summary:after{content:"›";font-size:22px;color:var(--k-yellow2);transition:transform .15s}
+.premium-profile .profile-titles[open]>summary:after,.premium-profile .profile-achievements[open]>summary:after{transform:rotate(90deg)}
+.premium-profile .profile-titles>div,.premium-profile .profile-achievements>div{padding:0 14px 12px!important}
+/* Полоса прокрутки рядов в сравнении — незаметная */
+.k8-cpick-chips{scrollbar-color:rgba(255,255,255,.12) transparent!important}
+.k8-cpick-chips::-webkit-scrollbar{height:3px!important}
+.k8-cpick-chips::-webkit-scrollbar-thumb{background:rgba(255,255,255,.12)!important}
+@media(max-width:760px){.premium-profile .profile-strengths article b{font-size:15px!important;white-space:normal!important;max-width:150px;line-height:1.2}}
+.premium-profile .profile-titles>summary,.premium-profile .profile-achievements>summary{font-size:15px!important}
