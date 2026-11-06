@@ -384,3 +384,19 @@ button,a,label,input,summary{-webkit-tap-highlight-color:transparent}
 .k8-entry .number-wrap input:focus{outline:none}
 /* Компьютер: блок ввода не «плавает» и не наезжает на таблицу */
 @media(min-width:1000px){.k8-live>.k8-entry{position:static!important}}
+
+/* ===== v8.5 ===== */
+html,body{overflow-x:clip}
+@media(min-width:1000px){
+  .k8-live .k8-entry .score-inputs{grid-auto-flow:column;grid-template-rows:repeat(var(--k8-rows2,5),auto)}
+  .k8-pre .k8-entry .score-inputs{grid-auto-flow:column;grid-template-rows:repeat(var(--k8-rows3,4),auto)}
+}
+@media(max-width:760px){
+  .topbar{gap:8px}
+  .brand{min-width:0;flex:1 1 auto}
+  .brand strong{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .room-tools{gap:4px!important;flex:0 0 auto}
+  .room-tools .tv-open,.room-tools .admin-pill,.room-tools .update-check,.room-tools .icon-btn{width:40px!important;min-width:40px!important;height:40px!important;min-height:40px!important;padding:0!important;display:grid!important;place-items:center}
+  .room-tools .tv-open span,.room-tools .update-check span{display:none!important}
+}
+@media(max-width:380px){.brand strong{font-size:14px}.brand-card{width:36px!important;height:44px!important}}

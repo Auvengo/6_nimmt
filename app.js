@@ -14,7 +14,7 @@ const PROFILE_PALETTES=[
 ];
 const PROFILE_PATTERNS=[{id:"none",name:"Без узора"},{id:"dots",name:"Крапинки"},{id:"stripes",name:"Полосы"},{id:"diamonds",name:"Ромбики"},{id:"waves",name:"Волны"}];
 const DEFAULT_PROFILE_PATTERNS=PROFILE_PATTERNS.filter(x=>x.id!=="none");
-const APP_VERSION = "8.4.0";
+const APP_VERSION = "8.5.0";
 const LIMIT = 10;
 const WIN_LINE = 66;
 const root = document.querySelector("#app");
@@ -57,6 +57,7 @@ let insightTimer = null, insightPausedUntil = 0, insightContentTimer = null;
 const INSIGHT_DELAY = 9000;
 let tvCelebrationGame = null, tvCelebrationUntil = 0, tvCelebrationStarted = 0, tvCelebrationTimer = null, tvCelebrationPhaseTimer = null;
 let tvEventUntil = 0, tvEventTimer = null;
+let k8SumConfirmed = false;
 let profileTab = "emoji", emojiGroup = 0, profileNameDraft = null;
 let activePadPlayer = null, addSelection = new Set(), addSearch = "", confirmState = null;
 let playerSort = (()=>{try{return localStorage.getItem("korova-player-sort")==="elo"?"elo":"games"}catch{return "games"}})();
@@ -620,7 +621,7 @@ function renderScoreEntry(game) {
   return`<section class="score-section k8-entry" id="k8-entry"><div class="section-heading"><div><h2>Очки раунда ${roundNo}</h2></div><span class="hint">Заполнено ${count} из ${players.length}</span></div>
     <p class="k8-entry-note">${K8_COARSE?"Нажмите на игрока и наберите очки на клавиатуре.":"Введите очки каждого игрока."} Можно с одного телефона или с нескольких одновременно.</p>
     ${roundSafetyMarkup()}
-    <form id="round-form" class="score-form"><div class="score-inputs k8-entry-list">${players.map(p=>{const has=Object.prototype.hasOwnProperty.call(drafts,p.id),v=has?drafts[p.id]:"",t=totalFor(p.id,game);return`<label ${profileAttrs(p,`score-row k8-erow ${has?"score-ready":""} ${activePadPlayer===p.id?"pad-active":""}`)} data-pad-player="${p.id}">${k8Avatar(p)}<span class="score-person"><b>${esc(p.name)}</b></span><span class="k8-proj" data-total="${t}">${k8Projection(t,v)}</span><span class="number-wrap"><span>${has?"✓":"＋"}</span><input data-draft-player="${p.id}" inputmode="${K8_COARSE?"none":"numeric"}" ${K8_COARSE?"readonly":""} min="0" max="999" type="number" value="${v}" placeholder="—" aria-label="Очки игрока ${esc(p.name)}"></span></label>`}).join("")}</div>
+    <form id="round-form" class="score-form"><div class="score-inputs k8-entry-list" style="--k8-rows2:${Math.ceil(players.length/2)};--k8-rows3:${Math.ceil(players.length/3)}">${players.map(p=>{const has=Object.prototype.hasOwnProperty.call(drafts,p.id),v=has?drafts[p.id]:"",t=totalFor(p.id,game);return`<label ${profileAttrs(p,`score-row k8-erow ${has?"score-ready":""} ${activePadPlayer===p.id?"pad-active":""}`)} data-pad-player="${p.id}">${k8Avatar(p)}<span class="score-person"><b>${esc(p.name)}</b></span><span class="k8-proj" data-total="${t}">${k8Projection(t,v)}</span><span class="number-wrap"><span>${has?"✓":"＋"}</span><input data-draft-player="${p.id}" inputmode="${K8_COARSE?"none":"numeric"}" ${K8_COARSE?"readonly":""} min="0" max="999" type="number" value="${v}" placeholder="—" aria-label="Очки игрока ${esc(p.name)}"></span></label>`}).join("")}</div>
     <div class="score-actions k8-entry-actions"><button class="button primary large k8-submit ${ready?"ready":""}" type="submit" ${canFinalize?"":"disabled"}>${k8SubmitLabel(ready,roundNo,players.length-count)}</button></div></form></section>`;
 }
 
@@ -662,7 +663,7 @@ function padPress(key){
   input.value=v;input.dispatchEvent(new Event("input",{bubbles:true}));updateRowProjection(input);updatePadUi();
 }
 document.addEventListener("click",event=>{
-  const key=event.target.closest("[data-pad-key]");if(key){event.preventDefault();try{navigator.vibrate?.(8)}catch{}padPress(key.dataset.padKey);return}
+  const key=event.target.closest("[data-pad-key]");if(key){event.preventDefault();padPress(key.dataset.padKey);return}
   if(!K8_COARSE)return;const row=event.target.closest("[data-pad-player]");if(!row)return;event.preventDefault();
   const prev=activePadPlayer&&document.querySelector(`[data-draft-player="${activePadPlayer}"]`);if(prev&&activePadPlayer!==row.dataset.padPlayer)commitPad(prev);
   activePadPlayer=row.dataset.padPlayer;updatePadUi();
@@ -1051,7 +1052,7 @@ root.addEventListener("submit", (event) => {
   if(event.target.id==="import-game-form"){captureImportValues();const rounds=[];for(let i=0;i<manualImport.roundCount;i++){const row={};let any=false,all=true;for(const id of manualImport.profileIds){const v=manualImport.values[`r${i}-${id}`]??"";if(v!==""){any=true;row[id]=Number(v)}else all=false}if(any&&!all){showToast(`Заполните весь раунд ${i+1}`,"error");manualImport.roundIndex=i;render();return}if(any)rounds.push(row)}if(!rounds.length){showToast(manualImport.quick?"Заполните итоги":"Добавьте хотя бы один раунд","error");return}const mode=manualImport.quick?"totals":"rounds";mutate(async()=>{const result=await api.importGame(`${manualImport.date}T12:00:00`,manualImport.profileIds,rounds,mode);clearImportDraft();return result},"Прошлая партия добавлена");return}
   if (event.target.id === "player-form") { const name = new FormData(event.target).get("name")?.trim(); if (name) mutate(() => api.addPlayer(name, selectedEmoji), `${name} за столом`); }
   if(event.target.id==="edit-profile-form"){const profile=(state.knownPlayers||[]).find(x=>x.id===editingProfileId),name=new FormData(event.target).get("name")?.trim();if(!profile||!name)return;mutate(()=>api.updateProfile(profile.id,name,selectedEmoji,selectedAccent,selectedPattern,selectedAward),"Оформление профиля сохранено");}
-  if(event.target.id==="round-form"){if(roundSubmitInFlight||busy){showToast("Раунд уже сохраняется");return}if(!navigator.onLine){showToast("Подключитесь к интернету — черновик уже сохранён на устройстве","error");return}if(pendingWrites.length){showToast("Подождите, пока черновики синхронизируются","error");flushPending();return}roundSubmitInFlight=true;const gameId=state.currentGame.id,key=`korova-round-token-${roomCode}-${gameId}`;let token=localStorage.getItem(key);if(!token){token=crypto.randomUUID();localStorage.setItem(key,token)}mutate(async()=>{const result=await api.finalizeRound(token);localStorage.removeItem(key);return result},"Раунд завершён").then(ok=>{if(ok)setTimeout(()=>{const e=document.querySelector("#k8-entry");if(e)window.scrollTo({top:e.getBoundingClientRect().top+window.scrollY-12,behavior:"smooth"})},80)}).finally(()=>{roundSubmitInFlight=false;refreshDraftUi()});return}
+  if(event.target.id==="round-form"){if(roundSubmitInFlight||busy){showToast("Раунд уже сохраняется");return}{const g=state.currentGame,d=g.draftScores||{},sum=g.players.reduce((n,p)=>n+Number(d[p.id]||0),0);if(sum>100&&!k8SumConfirmed){const top=[...g.players].sort((a,b)=>Number(d[b.id]||0)-Number(d[a.id]||0))[0];confirmState={title:`Сумма раунда — ${sum}`,text:`Обычно за раунд набирается меньше 100 очков. Больше всего у игрока ${top.name} — ${Number(d[top.id]||0)}. Проверьте, нет ли опечатки.`,ok:"Всё верно, записать",run:()=>{k8SumConfirmed=true;document.querySelector("#round-form")?.requestSubmit()}};modal="confirm";render();return}k8SumConfirmed=false}if(!navigator.onLine){showToast("Подключитесь к интернету — черновик уже сохранён на устройстве","error");return}if(pendingWrites.length){showToast("Подождите, пока черновики синхронизируются","error");flushPending();return}roundSubmitInFlight=true;const gameId=state.currentGame.id,key=`korova-round-token-${roomCode}-${gameId}`;let token=localStorage.getItem(key);if(!token){token=crypto.randomUUID();localStorage.setItem(key,token)}mutate(async()=>{const result=await api.finalizeRound(token);localStorage.removeItem(key);return result},"Раунд завершён").then(ok=>{if(ok)setTimeout(()=>{const e=document.querySelector("#k8-entry");if(e)window.scrollTo({top:e.getBoundingClientRect().top+window.scrollY-12,behavior:"smooth"})},80)}).finally(()=>{roundSubmitInFlight=false;refreshDraftUi()});return}
   if (event.target.id === "edit-round-form") { const form=new FormData(event.target),scores={};for(const player of state.currentGame.players){const raw=form.get(player.id);if(raw===""||raw==null||Number(raw)<0||!Number.isInteger(Number(raw))){showToast(`Укажите очки для ${player.name}`,"error");return}scores[player.id]=Number(raw)}mutate(()=>api.updateRound(editingRoundId,scores),"Результат раунда исправлен"); }
 });
 
