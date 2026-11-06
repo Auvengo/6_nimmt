@@ -656,3 +656,123 @@ body.tv-mode .tv-wait p{color:var(--k-soft)!important}
 body.tv-mode .tv-roster-player{background:var(--k-card2)!important;border:2px solid var(--k-line2)!important;color:var(--k-text)!important;box-shadow:none!important}
 body.tv-mode .tv-roster-player b{color:var(--k-text)!important}
 body.tv-mode .tv-roster-player:after{opacity:.12!important}
+
+/* ===== v9.1: архив ===== */
+.k8-arch-hero h1{font-size:clamp(28px,4vw,44px)}
+.k8-arch-add{min-height:40px;padding:0 14px;border-radius:12px;border:1px solid var(--k-line);background:var(--k-bg);color:var(--k-yellow2);font-weight:800;font-size:13px;cursor:pointer;white-space:nowrap}
+.k8-arch-add:hover{border-color:var(--k-yellow)}
+/* Фильтры */
+.k8-archive .archive-filter-shell{margin:0!important;border-radius:18px!important;background:var(--k-card2)!important;border:1px solid var(--k-line2)!important;box-shadow:none!important;color:var(--k-text);overflow:visible}
+.k8-archive .archive-filter-summary{background:transparent!important;color:var(--k-text)!important;border:0!important;padding:12px 14px!important;min-height:56px}
+.k8-archive .archive-filter-summary b{color:var(--k-text)!important}
+.k8-archive .archive-filter-summary small{color:var(--k-muted)!important}
+.k8-archive .filter-symbol{background:var(--k-yellow)!important;color:var(--k-ink)!important;border:0!important;border-radius:12px!important}
+.k8-archive .archive-filter-summary em{background:var(--k-yellow)!important;color:var(--k-ink)!important}
+.k8-archive .archive-filter-summary i{color:var(--k-soft)!important;font-style:normal}
+.k8-archive .archive-filter-chips{padding:0 14px 12px!important;background:transparent!important}
+.k8-archive .archive-filter-chips span{background:var(--k-bg)!important;color:var(--k-text)!important;border:1px solid var(--k-line)!important}
+.k8-archive .archive-filter-chips button{color:var(--k-yellow2)!important;background:transparent!important;border:0!important;font-weight:800}
+.k8-archive .archive-filter-card{background:transparent!important;border:0!important;border-top:1px solid var(--k-line2)!important;padding:14px!important;box-shadow:none!important}
+.k8-archive .archive-filter-card label>span,.k8-archive .archive-player-picker>span{color:var(--k-muted)!important;font-size:11px!important;letter-spacing:.08em}
+.k8-archive .archive-filter-card input,.k8-archive .archive-filter-card select{background:var(--k-bg)!important;color:var(--k-text)!important;border:1px solid var(--k-line)!important;border-radius:12px!important;color-scheme:dark;box-shadow:none!important;min-height:46px}
+.k8-archive .archive-filter-card input::placeholder{color:#6f8f83}
+.k8-archive .archive-filter-card input:focus,.k8-archive .archive-filter-card select:focus{outline:none;border-color:var(--k-yellow)!important}
+.k8-archive .archive-player-input{background:transparent!important;border:0!important}
+.k8-archive .archive-player-input button{color:var(--k-soft)!important;background:transparent!important}
+.k8-archive .archive-suggestions{background:var(--k-paper)!important;color:var(--k-ink)!important;border-radius:12px!important;box-shadow:0 12px 30px rgba(0,0,0,.4)!important;border:0!important;z-index:20}
+.k8-archive .archive-filter-actions{margin-top:12px;display:flex;gap:8px}
+.k8-archive .archive-filter-actions .button.primary{background:var(--k-yellow)!important;color:var(--k-ink)!important;border:0!important;border-radius:12px!important;box-shadow:0 4px 0 var(--k-yellow-dark)!important}
+.k8-archive .archive-filter-actions .button.secondary{background:transparent!important;color:var(--k-text)!important;border:1px solid var(--k-line)!important;border-radius:12px!important;box-shadow:none!important}
+/* Список */
+.k8-arch-results .k8-head span{font-size:12px;color:var(--k-muted)}
+.k8-arch-list{display:flex;flex-direction:column;gap:6px;margin-top:8px}
+.k8-arch-month{margin:12px 4px 4px;font-family:var(--k-display);font-weight:800;font-size:13px;letter-spacing:.04em;color:var(--k-yellow2)}
+.k8-arch-month:first-child{margin-top:0}
+.k8-arch-row{display:flex;align-items:center;gap:12px;width:100%;min-height:64px;padding:8px 14px 8px 8px;border-radius:14px;border:1px solid var(--k-line2);background:var(--k-card2);color:var(--k-text);text-align:left;cursor:pointer;font:inherit;transition:border-color .12s,background .12s}
+.k8-arch-row:hover{border-color:var(--k-line);background:#163d32}
+.k8-arch-row:focus-visible{outline:2px solid var(--k-yellow);outline-offset:2px}
+.k8-arch-date{flex:0 0 52px;display:flex;flex-direction:column;align-items:center;line-height:1;padding:6px 0;border-radius:10px;background:var(--k-bg)}
+.k8-arch-date b{font-family:var(--k-display);font-weight:800;font-size:18px}
+.k8-arch-date small{font-size:11px;font-weight:700;color:var(--k-soft);margin-top:3px}
+.k8-arch-date em{font-style:normal;font-size:10px;color:var(--k-muted);margin-top:3px}
+.k8-arch-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.k8-arch-main b{font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.k8-arch-main small{font-size:12px;color:var(--k-muted)}
+.k8-arch-tag{font-style:normal;padding:1px 6px;border-radius:6px;background:#3a2d0a;color:var(--k-yellow2)}
+.k8-arch-row>strong{display:flex;flex-direction:column;align-items:flex-end;font-family:var(--k-display);font-weight:800;font-size:20px;line-height:1}
+.k8-arch-row>strong small{font-family:Inter,system-ui,sans-serif;font-size:10px;font-weight:600;color:var(--k-muted);margin-top:3px}
+.k8-arch-row>i{font-style:normal;font-size:22px;color:var(--k-muted)}
+.k8-arch-more{margin-top:10px;width:100%;min-height:48px;border-radius:14px;border:1.5px dashed #3f7d69;background:transparent;color:var(--k-soft);font-weight:800;cursor:pointer}
+.k8-arch-empty{display:flex;flex-direction:column;align-items:center;gap:6px;padding:28px 16px;border-radius:18px;border:1.5px dashed #3f7d69;color:var(--k-soft);text-align:center}
+.k8-arch-empty b{color:var(--k-text);font-size:16px}
+.k8-arch-reset{margin-top:6px;min-height:40px;padding:0 14px;border-radius:12px;border:1px solid var(--k-line);background:transparent;color:var(--k-yellow2);font-weight:800;cursor:pointer}
+.k8-arch-loading i{background:var(--k-card2)!important;border-color:var(--k-line2)!important}
+@media(min-width:1000px){.k8-archive{display:flex!important}.k8-arch-list{display:grid;grid-template-columns:1fr 1fr;gap:8px}.k8-arch-month{grid-column:1/-1}}
+@media(max-width:420px){.k8-arch-row{gap:10px;padding-right:10px}.k8-arch-row>i{display:none}.k8-arch-hero .k8-hero-top{flex-wrap:wrap}}
+
+/* ===== v9.1: карточка архивной партии и разборы ===== */
+.modal.archive-game-modal{background:var(--paper,#fff9e9)!important;border-radius:22px!important;padding-top:0!important;overflow-x:hidden}
+.archive-game-modal .archive-game-top{margin:0 -30px 14px!important;padding:22px 30px 18px!important;background:var(--k-card)!important;color:var(--k-text)!important;border:0!important}
+.archive-game-modal .archive-game-top .eyebrow{color:var(--k-yellow2)!important}
+.archive-game-modal .archive-game-top h2{font-family:var(--k-display);font-weight:800;color:#fff!important;font-size:clamp(20px,4vw,28px)!important;margin:4px 0!important}
+.archive-game-modal .archive-game-top p{color:var(--k-soft)!important;margin:0}
+.archive-game-modal .score-mode-badge{background:var(--k-bg)!important;color:var(--k-yellow2)!important;border:0!important}
+.archive-game-modal .modal-close{background:var(--k-bg)!important;color:var(--k-text)!important;border:1px solid var(--k-line)!important;border-radius:12px!important;z-index:5}
+.archive-game-modal .archive-game-tabs{background:#e6dcc0!important;border:0!important;margin:0 0 14px!important;padding:4px!important;border-radius:12px!important;position:sticky;top:0;z-index:4}
+.archive-game-modal .archive-game-tabs button{min-height:40px!important;border:0!important;border-radius:9px!important;background:transparent!important;color:#4f4326!important;font-weight:800!important;font-size:13px!important;box-shadow:none!important}
+.archive-game-modal .archive-game-tabs button.active{background:var(--k-ink)!important;color:var(--k-yellow2)!important}
+.archive-game-modal .archive-game-body{padding:0!important}
+.archive-game-modal .archive-game-actions{background:var(--paper,#fff9e9)!important;border-top:1px solid #e3d8b8!important}
+.archive-game-modal .archive-game-actions .button.primary{background:var(--k-yellow)!important;color:var(--k-ink)!important;border:0!important;border-radius:12px!important;box-shadow:0 4px 0 var(--k-yellow-dark)!important}
+@media(max-width:760px){.archive-game-modal .archive-game-top{margin:0 -20px 14px!important;padding:20px 20px 16px!important}}
+/* Общие разборы партии (экран победителя и архив) */
+.winner-section-head{display:flex;align-items:center;gap:12px;margin:0 0 12px!important}
+.winner-section-head>span{width:44px;height:44px;flex:0 0 auto;display:grid;place-items:center;border-radius:12px;background:var(--k-card);font-size:22px}
+.winner-section-head small{font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#7a5b0c}
+.winner-section-head h2{margin:2px 0 0!important;font-family:var(--k-display);font-weight:800;font-size:clamp(20px,4vw,26px)!important;color:var(--k-ink)}
+.final-story-grid{display:grid!important;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))!important;gap:8px!important}
+.final-story-grid article,.final-awards article{display:flex!important;align-items:flex-start;gap:12px;padding:12px 14px!important;border-radius:14px!important;background:#fff!important;border:1px solid #e3d8b8!important;box-shadow:none!important}
+.final-story-grid article>span,.final-awards article>span{width:38px;height:38px;flex:0 0 auto;display:grid;place-items:center;border-radius:50%;background:#f6edcf;font-size:20px}
+.final-story-grid b,.final-awards b{font-size:15px;color:var(--k-ink)}
+.final-story-grid p{margin:2px 0 0;font-size:13px;color:#5f584a}
+.final-awards{display:grid!important;grid-template-columns:repeat(auto-fit,minmax(230px,1fr))!important;gap:8px!important}
+.final-awards small{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#8f8670}
+.final-awards p{margin:2px 0;font-weight:800;color:var(--k-ink)}
+.final-awards em{font-style:normal;font-size:12px;color:#6f6a5f}
+.final-award-note{font-size:13px;color:#6f6a5f;margin:0 0 10px!important}
+.final-subtitle{margin:18px 0 8px!important;font-family:var(--k-display);font-weight:800;font-size:15px!important;letter-spacing:0!important;text-transform:none!important;color:var(--k-ink)}
+.final-rank-timeline{display:flex;flex-direction:column;gap:6px}
+.rank-journey{display:flex!important;align-items:center;gap:12px;padding:8px 12px!important;border-radius:14px!important;background:#fff!important;border:1px solid #e3d8b8!important;box-shadow:none!important;flex-wrap:wrap}
+.rank-journey:after{opacity:.06!important}
+.rank-journey.winner{border-color:#e3b23c!important;background:#fff8dc!important}
+.journey-player{display:flex;align-items:center;gap:8px;min-width:150px}
+.journey-player .profile-avatar{width:34px!important;height:34px!important;font-size:18px!important;border-radius:50%!important;border:0!important;box-shadow:none!important;background:#f6edcf!important}
+.journey-player b{font-size:14px}
+.journey-player small{display:none}
+.journey-steps{display:flex;align-items:center;gap:4px;flex-wrap:wrap}
+.journey-steps span{min-width:34px;padding:3px 6px;border-radius:9px!important;background:#f6edcf!important;border:0!important;display:flex;flex-direction:column;align-items:center;line-height:1.1;box-shadow:none!important}
+.journey-steps span small{font-size:9px;color:#8f8670}
+.journey-steps span b{font-size:14px}
+.journey-steps span.first{background:#fff1bf!important;box-shadow:inset 0 0 0 1.5px #e3b23c!important}
+.journey-steps span.last{background:var(--k-ink)!important;color:var(--k-yellow2)!important}
+.journey-steps span.last small{color:var(--k-soft)}
+.journey-steps i{font-style:normal;color:#b9ad8c;font-size:11px}
+/* Подтянуть отступы админ-блока в архивной партии */
+.archive-game-modal .archive-manage{margin-top:12px;border-radius:14px;border:1px solid #e3d8b8;background:#fff}
+/* Архивная партия: окно без внешних отступов, отступы у частей */
+.archive-game-modal .archive-game-top{margin:0!important;padding:20px 64px 16px 20px!important}
+.archive-game-modal .archive-game-tabs{margin:12px 16px!important}
+.archive-game-modal .archive-game-body{padding:0 16px 16px!important}
+.archive-game-modal .archive-game-actions{padding:12px 16px calc(14px + env(safe-area-inset-bottom))!important}
+.final-story-grid article,.final-awards article{min-height:0!important;height:auto!important}
+@media(min-width:761px){.archive-game-modal .archive-game-top{padding:24px 70px 18px 28px!important}.archive-game-modal .archive-game-tabs{margin:14px 28px!important}.archive-game-modal .archive-game-body{padding:0 28px 18px!important}.archive-game-modal .archive-game-actions{padding:14px 28px!important}}
+
+/* ===== v9.1.1 ===== */
+.k8-archive .filter-symbol{display:grid!important;place-items:center;width:40px;height:40px;flex:0 0 40px;font-size:18px}
+.k8-archive .archive-filter-summary{display:flex!important;align-items:center;gap:12px;text-align:left}
+.k8-archive .archive-filter-summary>span:nth-child(2){flex:1;display:flex;flex-direction:column}
+.k8-archive .archive-filter-card select{appearance:none;-webkit-appearance:none;padding-right:38px!important;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23c6d6ce' stroke-width='2.5' stroke-linecap='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")!important;background-repeat:no-repeat!important;background-position:right 14px center!important}
+.k8-archive .archive-filter-card input[type=date]{min-width:0;width:100%;box-sizing:border-box}
+.archive-game-modal .archive-game-top h2{font-size:clamp(20px,5vw,26px)!important;line-height:1.15}
+.archive-game-modal .archive-game-top .k8-arch-tag{font-size:12px}
+@media(max-width:760px){.k8-arch-hero p{display:none}.k8-arch-hero h1{font-size:28px}}
