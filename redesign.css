@@ -1020,3 +1020,58 @@ body.tv-mode .tv-roster-player:after{opacity:.12!important}
   .premium-profile .profile-chart .profile-score{font-size:17px!important}
   .premium-profile .profile-chart .profile-score-bg{width:40px;height:22px;transform:translate(-5px,-4px)}
 }
+
+/* ===== v9.3 ===== */
+/* Калибровка — свёрнутый блок (телефон) */
+.k8-calib{margin-top:10px;border-radius:16px;border:1px dashed #3f7d69;background:var(--k-card2);overflow:hidden}
+.k8-calib>summary{display:flex;align-items:center;gap:10px;padding:12px 14px;cursor:pointer;list-style:none;color:var(--k-text)}
+.k8-calib>summary::-webkit-details-marker{display:none}
+.k8-calib>summary>span{flex:1;display:flex;flex-direction:column;gap:2px}
+.k8-calib>summary b{font-size:15px;color:#fff}
+.k8-calib>summary small{font-size:12px;color:var(--k-soft)}
+.k8-calib>summary i{font-style:normal;font-size:22px;color:var(--k-yellow2);transition:transform .15s}
+.k8-calib[open]>summary i{transform:rotate(90deg)}
+.k8-calib>div{display:flex;flex-direction:column;gap:2px;padding:0 8px 8px}
+.k8-calib>div>button{display:flex;align-items:center;gap:10px;min-height:48px;padding:4px 8px;border:0;border-radius:12px;background:transparent;color:var(--k-text);font:inherit;text-align:left;cursor:pointer}
+.k8-calib>div>button:hover{background:rgba(255,255,255,.04)}
+.k8-calib>div>button .k8-av{width:32px;height:32px;font-size:17px}
+.k8-calib>div>button b{flex:1;min-width:0;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.k8-calib>div>button small{min-width:28px;text-align:right;font-weight:800;color:var(--k-yellow2)}
+.k8-calib-bar{display:block;width:60px;height:6px;border-radius:3px;background:rgba(255,255,255,.12);overflow:hidden;flex:0 0 auto}
+.k8-calib-bar em{display:block;height:100%;background:var(--k-yellow);border-radius:3px}
+.k8-stats .elo-mobile-calibration{display:none!important}
+/* Калибровка в таблице (компьютер) */
+.k8-stats .k8-calib-sep td{background:var(--k-bg)!important;color:var(--k-yellow2)!important;font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;text-align:left!important;padding:10px 16px!important}
+.k8-stats .k8-calib-row td{opacity:.75}
+/* Карточка игрока: калибровка полоской */
+.k8-elo-calib{display:flex!important;align-items:center;gap:10px;flex-wrap:wrap}
+.k8-elo-calib .k8-calib-bar{width:80px}
+/* Оформление — в верхней панели на телефоне */
+.k8-edit-top{display:none!important}
+@media(max-width:760px){.k8-edit-top{display:inline-flex!important}.premium-profile>header>.profile-edit-identity{display:none!important}}
+/* Сильные стороны — столбиком на телефоне */
+@media(max-width:760px){
+  .premium-profile .profile-strengths{display:flex!important;flex-direction:column;gap:6px!important}
+  .premium-profile .profile-strengths article{display:grid!important;grid-template-columns:36px 1fr;align-items:center;text-align:left!important;padding:10px 12px!important;min-height:0!important}
+  .premium-profile .profile-strengths article>span{grid-row:1/3;font-size:24px}
+  .premium-profile .profile-strengths article>div{display:grid;grid-template-columns:1fr auto;column-gap:10px;align-items:baseline}
+  .premium-profile .profile-strengths article small{grid-column:1;font-size:11px!important}
+  .premium-profile .profile-strengths article b{grid-column:2;grid-row:1/3;font-size:18px!important;text-align:right;white-space:nowrap}
+  .premium-profile .profile-strengths article p{grid-column:1;margin:0!important;font-size:11px!important}
+}
+/* График: ожидание */
+.premium-profile .k8-chart-wait{padding:16px!important;border-radius:14px;border:1px dashed rgba(255,255,255,.18)!important;background:transparent!important;color:var(--k-soft)!important;text-align:center;font-size:13px}
+/* Титулы и достижения — раскрывающиеся плашки */
+.premium-profile .profile-titles,.premium-profile .profile-achievements{border:1px solid rgba(255,255,255,.12)!important;border-radius:14px!important;background:rgba(0,0,0,.22)!important;margin-top:8px!important;overflow:hidden}
+.premium-profile .profile-titles>summary,.premium-profile .profile-achievements>summary{display:flex!important;align-items:center;gap:10px;min-height:52px;padding:0 14px!important;cursor:pointer;list-style:none;color:#fff!important;font-weight:800;border:0!important}
+.premium-profile .profile-titles>summary::-webkit-details-marker,.premium-profile .profile-achievements>summary::-webkit-details-marker{display:none}
+.premium-profile .profile-titles>summary span,.premium-profile .profile-achievements>summary span{margin-left:auto}
+.premium-profile .profile-titles>summary:after,.premium-profile .profile-achievements>summary:after{content:"›";font-size:22px;color:var(--k-yellow2);transition:transform .15s}
+.premium-profile .profile-titles[open]>summary:after,.premium-profile .profile-achievements[open]>summary:after{transform:rotate(90deg)}
+.premium-profile .profile-titles>div,.premium-profile .profile-achievements>div{padding:0 14px 12px!important}
+/* Полоса прокрутки рядов в сравнении — незаметная */
+.k8-cpick-chips{scrollbar-color:rgba(255,255,255,.12) transparent!important}
+.k8-cpick-chips::-webkit-scrollbar{height:3px!important}
+.k8-cpick-chips::-webkit-scrollbar-thumb{background:rgba(255,255,255,.12)!important}
+@media(max-width:760px){.premium-profile .profile-strengths article b{font-size:15px!important;white-space:normal!important;max-width:150px;line-height:1.2}}
+.premium-profile .profile-titles>summary,.premium-profile .profile-achievements>summary{font-size:15px!important}
