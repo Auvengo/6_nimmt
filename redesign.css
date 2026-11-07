@@ -1087,3 +1087,37 @@ body.tv-mode .tv-roster-player:after{opacity:.12!important}
 .premium-profile .profile-sticky-compare:hover{background:var(--k-yellow2)!important}
 .premium-profile .profile-close{width:38px!important;height:38px!important;border-radius:12px!important;border:1px solid var(--k-line)!important;background:var(--k-bg)!important;color:var(--k-text)!important}
 @media(max-width:760px){.k8-pc-edit{width:32px;height:32px;right:-6px;bottom:-6px}.premium-profile>header>.profile-identity-summary{flex:1 1 0!important}}
+
+/* ===== v9.4 ===== */
+/* Переключатель разделов статистики на телефоне — на всю ширину */
+@media(max-width:760px){.k8-stats .stats2-controls nav.k8-stabs{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;width:100%!important;max-width:none!important}.k8-stats .stats2-controls nav.k8-stabs button{width:100%!important;min-width:0!important}}
+/* Короткая подсказка раздела */
+.k8-stats .elo-help-popover.k8-help{max-height:none!important;overflow:visible}
+@media(hover:none){.elo-help-wrap:hover:not(.open) .elo-help-popover,.award-help-wrap:hover:not(.open) .award-help-popover{display:none!important}}
+@media(max-width:760px){.k8-stats .elo-help-popover.k8-help{position:absolute!important;left:auto!important;right:-8px!important;top:40px!important;bottom:auto!important;width:min(320px,86vw)!important;box-shadow:0 18px 40px rgba(0,0,0,.5)!important}}
+.k8-stats .k8-stats-title{position:relative}
+/* Секретные достижения */
+.k8-secret{font-style:normal;font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;padding:2px 6px;margin-left:6px;border-radius:6px;background:#3a2d0a;color:var(--k-yellow2);vertical-align:middle}
+.k8-stats .k8-secret-row{border-style:dashed!important;background:transparent!important}
+/* Рекорды: всё время / месяц */
+.k8-stats .record-book>header{display:flex!important;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.k8-rec-tabs{background:var(--k-bg)!important}
+.k8-rec-tabs button{color:var(--k-soft)!important}
+.k8-rec-tabs button.on{background:var(--k-yellow)!important;color:var(--k-ink)!important}
+.k8-rec-empty{margin:0;padding:18px;color:var(--k-soft);text-align:center}
+/* Итоги партии: Эло и чемпионская гонка */
+.k8-elo-d{font-style:normal;font-size:12px;font-weight:800;padding:2px 7px;border-radius:999px;background:#efe6cc;color:#5f584a;margin-left:auto}
+.k8-elo-d.up{background:#dff3e8;color:#1c6b47}
+.k8-elo-d.down{background:#fbe1dc;color:#9a2d24}
+.k8-win-list li .k8-elo-d+strong{margin-left:10px}
+.k8-race{border-radius:16px;background:var(--k-card);color:var(--k-text);padding:12px 14px;display:flex;flex-direction:column;gap:6px}
+.k8-race-head{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:2px}
+.k8-race-news{font-size:13px;color:var(--k-yellow2)}
+.k8-race-row{display:flex;align-items:center;gap:10px;min-height:40px}
+.k8-race-row .k8-av{width:30px;height:30px;font-size:16px}
+.k8-race-row b{flex:1;min-width:0;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.k8-race-row strong{font-family:var(--k-display);font-size:17px;color:#fff}
+.k8-race-row small{min-width:76px;text-align:right;font-size:11px;color:var(--k-muted)}
+.k8-race .k8-elo-d{margin-left:0;background:var(--k-bg);color:var(--k-soft)}
+.k8-race .k8-elo-d.up{background:rgba(127,214,164,.15);color:var(--k-good)}
+.k8-race .k8-elo-d.down{background:rgba(224,112,95,.15);color:#ffb4a8}
