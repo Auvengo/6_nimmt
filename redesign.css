@@ -1121,3 +1121,34 @@ body.tv-mode .tv-roster-player:after{opacity:.12!important}
 .k8-race .k8-elo-d{margin-left:0;background:var(--k-bg);color:var(--k-soft)}
 .k8-race .k8-elo-d.up{background:rgba(127,214,164,.15);color:var(--k-good)}
 .k8-race .k8-elo-d.down{background:rgba(224,112,95,.15);color:#ffb4a8}
+
+/* ===== v9.4.1: зал наград ===== */
+/* Подсказка — под кнопкой «?», в тёмном стиле */
+.k8-stats .award-help-wrap{position:relative}
+.k8-stats .award-help-popover{position:absolute!important;top:44px!important;right:0!important;left:auto!important;bottom:auto!important;width:min(320px,82vw)!important;max-height:none!important;z-index:30;box-shadow:0 18px 40px rgba(0,0,0,.5)!important}
+.k8-stats .award-help-popover span{display:block;margin-top:6px;font-size:13px;line-height:1.45}
+.k8-stats .award-help-popover strong{color:#fff!important}
+/* Раскрытый список обладателей — тёмные плашки */
+.k8-stats .title-row .permanent-holder-expanded{border-top:1px dashed var(--k-line)!important}
+.k8-stats .permanent-holder-expanded span{background:var(--k-bg)!important;border:1px solid var(--k-line)!important;color:var(--k-text)!important;font-weight:700}
+/* На телефоне: название и описание на всю ширину, обладатели — строкой ниже */
+@media(max-width:760px){
+  .k8-stats .title-row{display:flex!important;flex-direction:column!important;align-items:stretch!important;gap:8px!important;padding:14px!important}
+  .k8-stats .title-row>div{width:100%}
+  .k8-stats .title-row>span,.k8-stats .title-row .permanent-holder-summary{display:flex!important;flex-direction:row!important;align-items:center!important;justify-content:space-between!important;gap:8px;width:100%;text-align:left!important}
+  .k8-stats .title-row>span>b{display:block;text-align:left!important;font-size:14px}
+  .k8-stats .holder-preview-desktop{display:none!important}
+  .k8-stats .holder-preview-mobile{display:block!important}
+  .k8-stats .title-row>span>small{margin-left:auto}
+}
+@media(max-width:760px){
+  .k8-stats .title-row>.permanent-holder-summary{flex:0 0 auto!important;max-width:100%!important;flex-wrap:nowrap!important}
+  .k8-stats .permanent-holder-summary .holder-preview{flex:1;min-width:0}
+  .k8-stats .title-row .permanent-holder-expanded{flex:0 0 auto!important;width:100%!important;box-sizing:border-box}
+  .k8-stats .permanent-holder-expanded span{flex:0 0 auto;width:auto!important;height:auto!important;padding:5px 10px!important;border-radius:999px!important;white-space:nowrap}
+  .k8-stats .title-list,.k8-stats .awards-hub{overflow:hidden}
+}
+.k8-stats .permanent-title-row.expanded{background:var(--k-card)!important}
+@media(max-width:760px){.k8-stats .title-row{flex-wrap:nowrap!important;align-content:stretch!important}}
+.k8-stats .title-list{display:flex!important;flex-direction:column;gap:6px!important}
+@media(min-width:761px){.k8-stats .title-list{display:grid!important;grid-template-columns:1fr 1fr}}
