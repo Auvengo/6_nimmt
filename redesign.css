@@ -1152,3 +1152,25 @@ body.tv-mode .tv-roster-player:after{opacity:.12!important}
 @media(max-width:760px){.k8-stats .title-row{flex-wrap:nowrap!important;align-content:stretch!important}}
 .k8-stats .title-list{display:flex!important;flex-direction:column;gap:6px!important}
 @media(min-width:761px){.k8-stats .title-list{display:grid!important;grid-template-columns:1fr 1fr}}
+
+/* ===== v9.4.2: табло перед игрой — прогноз в тёмной теме ===== */
+body.tv-mode .daily-carousel{background:var(--k-card)!important;border:2px solid var(--k-line)!important;box-shadow:none!important;color:var(--k-text)!important;border-radius:2vw!important;overflow:hidden}
+body.tv-mode .daily-carousel>header{background:transparent!important;border-bottom:1px solid var(--k-line2)!important}
+body.tv-mode .daily-carousel .deck-body,body.tv-mode .daily-carousel .insight-slide{background:transparent!important;color:var(--k-text)!important}
+body.tv-mode .daily-carousel .deck-body:before,body.tv-mode .daily-carousel .deck-body:after,body.tv-mode .daily-carousel:after{display:none!important}
+body.tv-mode .daily-carousel .profile-surface{background:var(--k-card2)!important;border-color:var(--k-line)!important;box-shadow:none!important;color:var(--k-text)!important}
+body.tv-mode .daily-carousel .profile-surface:after{opacity:.08!important}
+body.tv-mode .daily-carousel b,body.tv-mode .daily-carousel strong,body.tv-mode .daily-carousel span{color:#fff!important}
+body.tv-mode .daily-carousel strong{color:var(--k-yellow2)!important}
+body.tv-mode .daily-carousel small,body.tv-mode .daily-carousel p,body.tv-mode .daily-carousel em{color:var(--k-soft)!important}
+body.tv-mode .daily-carousel i{color:var(--k-yellow2)!important}
+body.tv-mode .daily-carousel .profile-avatar{background:var(--k-bg)!important;border-color:var(--k-line)!important;box-shadow:none!important}
+body.tv-mode .daily-carousel .deck-pagination i,body.tv-mode .daily-carousel .insight-dots i{background:var(--k-line)!important}
+body.tv-mode .daily-carousel .deck-pagination .active,body.tv-mode .daily-carousel .insight-dots .active{background:var(--k-yellow)!important}
+/* Карточки «Сегодня за столом» — без ярких узоров */
+body.tv-mode .tv-roster-player:after{opacity:.06!important}
+body.tv-mode .daily-carousel .daily-story{background:var(--k-card2)!important;border:1px solid var(--k-line)!important;box-shadow:none!important}
+body.tv-mode .daily-carousel .daily-story:before,body.tv-mode .daily-carousel .daily-story:after{display:none!important}
+body.tv-mode .daily-carousel .history-timeline span{color:var(--k-soft)!important}
+body.tv-mode .daily-carousel .history-timeline i{background:var(--k-line)!important}
+body.tv-mode .daily-carousel{height:auto!important;max-height:none!important}body.tv-mode .daily-carousel .deck-body{zoom:1.3;height:auto!important;min-height:0!important;max-height:none!important;overflow:visible!important}
